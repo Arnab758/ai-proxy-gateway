@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proxymic — AI Gateway: Cut LLM Costs 40-70% Instantly</title>
+<meta name="description" content="Proxymic is a semantic caching proxy for LLM APIs. Save 40-70% on OpenAI, Groq, and Anthropic costs with zero code changes.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body { font-family:'Inter',system-ui,sans-serif; background:#000; color:#a1a1aa; overflow-x:hidden; }
+::selection { background:#8b5cf6; color:#fff; }
+
+/* Animated grid background */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(139,92,246,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,92,246,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Glow orbs */
+.glow-1 {
+  position:fixed; top:-20%; left:-10%; width:600px; height:600px;
+  background:radial-gradient(circle, rgba(139,92,246,.12) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.glow-2 {
+  position:fixed; bottom:-20%; right:-10%; width:500px; height:500px;
+  background:radial-gradient(circle, rgba(52,211,153,.08) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+/* Nav */
+.nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:16px 0; transition:all .3s; }
+.nav.scrolled { background:rgba(0,0,0,.85); backdrop-filter:blur(20px); border-bottom:1px solid #18181b; }
+.nav-inner { max-width:1200px; margin:0 auto; padding:0 24px; display:flex; justify-content:space-between; align-items:center; }
+.nav-logo { font-size:22px; font-weight:800; text-decoration:none; }
+.nav-logo span:first-child { color:#8b5cf6; }
+.nav-logo span:last-child { color:#52525b; }
+.nav-links { display:flex; gap:32px; align-items:center; }
+.nav-links a { color:#71717a; text-decoration:none; font-size:14px; font-weight:500; transition:color .2s; }
+.nav-links a:hover { color:#fafafa; }
+.nav-cta { padding:10px 24px; background:#8b5cf6; color:#fff; border-radius:10px; font-size:14px; font-weight:600; text-decoration:none; transition:all .2s; }
+.nav-cta:hover { background:#7c3aed; transform:translateY(-1px); box-shadow:0 4px 20px rgba(139,92,246,.3); }
+
+/* Hero */
+.hero { position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; padding:120px 24px 80px; max-width:1200px; margin:0 auto; }
+.hero-content { flex:1; max-width:680px; }
+.hero-badge { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.2); border-radius:20px; font-size:13px; color:#a78bfa; margin-bottom:24px; }
+.hero-badge-dot { width:6px; height:6px; background:#34d399; border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+.hero h1 { font-size:clamp(40px,6vw,72px); font-weight:800; line-height:1.05; color:#fafafa; margin-bottom:20px; letter-spacing:-2px; }
+.hero h1 span { background:linear-gradient(135deg,#8b5cf6,#34d399); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero p { font-size:18px; line-height:1.7; color:#71717a; margin-bottom:40px; max-width:560px; }
+.hero-actions { display:flex; gap:16px; flex-wrap:wrap; }
+.btn-primary { padding:16px 32px; background:#8b5cf6; color:#fff; border-radius:12px; font-size:16px; font-weight:600; text-decoration:none; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+.btn-primary:hover { background:#7c3aed; transform:translateY(-2px); box-shadow:0 8px 32px rgba(139,92,246,.3); }
+.btn-secondary { padding:16px 32px; background:transparent; color:#fafafa; border:1px solid #27272a; border-radius:12px; font-size:16px; font-weight:600; text-decoration:none; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+.btn-secondary:hover { border-color:#8b5cf6; background:rgba(139,92,246,.05); transform:translateY(-2px); }
+
+/* Hero visual */
+.hero-visual { flex:1; position:relative; display:flex; align-items:center; justify-content:center; min-height:400px; }
+.hero-card { background:#09090b; border:1px solid #18181b; border-radius:20px; padding:32px; width:100%; max-width:420px; position:relative; }
+.hero-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.hero-card-dots { display:flex; gap:6px; }
+.hero-card-dot { width:10px; height:10px; border-radius:50%; }
+.hero-card-dot.red { background:#ef4444; }
+.hero-card-dot.yellow { background:#fbbf24; }
+.hero-card-dot.green { background:#34d399; }
+.hero-card-title { color:#52525b; font-size:12px; font-weight:500; letter-spacing:.5px; }
+.hero-card-line { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #09090b; font-family:'JetBrains Mono',monospace; font-size:12px; }
+.hero-card-line:last-child { border-bottom:none; }
+.hero-card-label { color:#52525b; min-width:60px; }
+.hero-card-value { color:#34d399; }
+.hero-card-value.miss { color:#ef4444; }
+.hero-card-value.time { color:#60a5fa; }
+.hero-card-value.req { color:#fbbf24; }
+.hero-card-bar { flex:1; height:6px; background:#18181b; border-radius:3px; overflow:hidden; }
+.hero-card-bar-fill { height:100%; border-radius:3px; transition:width 1s; }
+.hero-card-bar-fill.hit { background:#34d399; width:72%; }
+.hero-card-bar-fill.miss { background:#ef4444; width:28%; }
+.hero-savings-badge { position:absolute; top:-12px; right:-12px; background:#34d399; color:#000; padding:8px 16px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:0 4px 20px rgba(52,211,153,.3); animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+
+/* Stats bar */
+.stats-bar { position:relative; z-index:1; padding:60px 24px; border-top:1px solid #18181b; border-bottom:1px solid #18181b; background:#09090b; }
+.stats-inner { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:24px; text-align:center; }
+.stat-number { font-size:36px; font-weight:800; color:#fafafa; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.stat-number.green { color:#34d399; }
+.stat-number.purple { color:#a78bfa; }
+.stat-number.blue { color:#60a5fa; }
+.stat-label { color:#52525b; font-size:14px; margin-top:6px; }
+
+/* Sections common */
+.section { position:relative; z-index:1; padding:100px 24px; max-width:1200px; margin:0 auto; }
+.section-label { color:#8b5cf6; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:2px; margin-bottom:12px; }
+.section-title { font-size:clamp(28px,4vw,48px); font-weight:800; color:#fafafa; margin-bottom:16px; letter-spacing:-1px; }
+.section-sub { font-size:16px; color:#71717a; max-width:600px; margin-bottom:48px; line-height:1.7; }
+
+/* Features grid */
+.features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+.feature-card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:32px; transition:all .3s; position:relative; overflow:hidden; }
+.feature-card:hover { border-color:#27272a; transform:translateY(-2px); }
+.feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#8b5cf6,#34d399); opacity:0; transition:opacity .3s; }
+.feature-card:hover::before { opacity:1; }
+.feature-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:16px; }
+.feature-icon.purple { background:rgba(139,92,246,.1); }
+.feature-icon.green { background:rgba(52,211,153,.1); }
+.feature-icon.blue { background:rgba(96,165,250,.1); }
+.feature-icon.yellow { background:rgba(251,191,36,.1); }
+.feature-icon.red { background:rgba(239,68,68,.1); }
+.feature-icon.cyan { background:rgba(34,211,238,.1); }
+.feature-card h3 { color:#fafafa; font-size:17px; font-weight:600; margin-bottom:8px; }
+.feature-card p { color:#71717a; font-size:14px; line-height:1.7; }
+
+/* How it works */
+.steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; margin-top:48px; }
+.step { text-align:center; padding:32px; position:relative; }
+.step-number { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-family:'JetBrains Mono',monospace; }
+.step h3 { color:#fafafa; font-size:18px; font-weight:600; margin-bottom:8px; }
+.step p { color:#71717a; font-size:14px; line-height:1.7; max-width:320px; margin:0 auto; }
+.step-arrow { display:none; position:absolute; top:40px; right:-12px; font-size:24px; color:#27272a; }
+@media(min-width:900px) { .step-arrow { display:block; } .steps.grid-cols-3 .step:last-child .step-arrow { display:none; } }
+
+/* Code demo */
+.code-demo { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; margin-top:40px; }
+.code-demo-tabs { display:flex; gap:4px; margin-bottom:16px; }
+.code-demo-tab { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:none; background:transparent; color:#52525b; transition:all .2s; }
+.code-demo-tab.active { background:#000; color:#fafafa; }
+.code-demo-content { background:#000; border-radius:10px; padding:20px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.8; overflow-x:auto; }
+.code-demo-content .comment { color:#52525b; }
+.code-demo-content .keyword { color:#8b5cf6; }
+.code-demo-content .string { color:#34d399; }
+.code-demo-content .func { color:#60a5fa; }
+
+/* Pricing */
+.pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:48px; }
+.pricing-card { background:#09090b; border:1px solid #18181b; border-radius:20px; padding:40px 32px; position:relative; transition:all .3s; }
+.pricing-card:hover { border-color:#27272a; transform:translateY(-4px); }
+.pricing-card.featured { border-color:rgba(139,92,246,.3); background:linear-gradient(180deg,rgba(139,92,246,.05),#09090b); }
+.pricing-card.featured::before { content:'Most Popular'; position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#8b5cf6; color:#fff; padding:4px 16px; border-radius:20px; font-size:12px; font-weight:600; }
+.pricing-name { color:#52525b; font-size:12px; text-transform:uppercase; letter-spacing:2px; font-weight:600; margin-bottom:8px; }
+.pricing-price { font-size:44px; font-weight:800; color:#fafafa; font-family:'JetBrains Mono',monospace; letter-spacing:-2px; }
+.pricing-price span { font-size:16px; color:#52525b; font-weight:400; font-family:'Inter',sans-serif; }
+.pricing-desc { color:#71717a; font-size:14px; margin:16px 0 24px; line-height:1.6; }
+.pricing-features { list-style:none; padding:0; margin:0 0 32px; }
+.pricing-features li { padding:8px 0; color:#a1a1aa; font-size:14px; display:flex; align-items:center; gap:10px; }
+.pricing-features li::before { content:'✓'; color:#34d399; font-weight:700; }
+.pricing-features li.muted { color:#52525b; }
+.pricing-features li.muted::before { content:'—'; color:#3f3f46; }
+.pricing-cta { display:block; text-align:center; padding:14px; border-radius:10px; font-size:15px; font-weight:600; text-decoration:none; transition:all .2s; }
+.pricing-cta.primary { background:#8b5cf6; color:#fff; }
+.pricing-cta.primary:hover { background:#7c3aed; box-shadow:0 4px 20px rgba(139,92,246,.3); }
+.pricing-cta.secondary { background:transparent; border:1px solid #27272a; color:#fafafa; }
+.pricing-cta.secondary:hover { border-color:#8b5cf6; }
+
+/* CTA section */
+.cta-section { position:relative; z-index:1; padding:120px 24px; text-align:center; background:linear-gradient(180deg,transparent,rgba(139,92,246,.03),transparent); }
+.cta-section h2 { font-size:clamp(28px,4vw,48px); font-weight:800; color:#fafafa; margin-bottom:16px; letter-spacing:-1px; }
+.cta-section p { font-size:16px; color:#71717a; max-width:500px; margin:0 auto 32px; line-height:1.7; }
+.cta-actions { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+
+/* Testimonials */
+.testimonials { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; margin-top:48px; }
+.testimonial-card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; }
+.testimonial-stars { color:#fbbf24; font-size:14px; margin-bottom:12px; }
+.testimonial-text { color:#a1a1aa; font-size:14px; line-height:1.7; margin-bottom:16px; font-style:italic; }
+.testimonial-author { display:flex; align-items:center; gap:12px; }
+.testimonial-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#34d399); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; }
+.testimonial-name { color:#fafafa; font-size:13px; font-weight:600; }
+.testimonial-role { color:#52525b; font-size:12px; }
+
+/* FAQ */
+.faq-list { max-width:800px; margin:48px auto 0; }
+.faq-item { border-bottom:1px solid #18181b; padding:20px 0; }
+.faq-question { display:flex; justify-content:space-between; align-items:center; cursor:pointer; color:#fafafa; font-size:15px; font-weight:500; }
+.faq-question:hover { color:#a78bfa; }
+.faq-arrow { font-size:18px; color:#52525b; transition:transform .3s; }
+.faq-item.open .faq-arrow { transform:rotate(180deg); }
+.faq-answer { max-height:0; overflow:hidden; transition:max-height .3s, padding .3s; color:#71717a; font-size:14px; line-height:1.7; }
+.faq-item.open .faq-answer { max-height:300px; padding-top:16px; }
+
+/* Footer */
+.footer { position:relative; z-index:1; border-top:1px solid #18181b; padding:60px 24px 40px; background:#09090b; }
+.footer-inner { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:32px; }
+.footer-brand p { color:#52525b; font-size:13px; margin-top:12px; line-height:1.7; max-width:300px; }
+.footer-col h4 { color:#fafafa; font-size:13px; font-weight:600; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; }
+.footer-col a { display:block; color:#52525b; font-size:13px; text-decoration:none; padding:4px 0; transition:color .2s; }
+.footer-col a:hover { color:#a1a1aa; }
+.footer-bottom { max-width:1200px; margin:40px auto 0; padding-top:24px; border-top:1px solid #18181b; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.footer-bottom p { color:#3f3f46; font-size:12px; }
+
+/* Mobile nav */
+.mobile-menu-btn { display:none; background:none; border:none; color:#fafafa; font-size:24px; cursor:pointer; }
+@media(max-width:768px) {
+  .nav-links { display:none; flex-direction:column; position:fixed; top:64px; left:0; right:0; background:rgba(0,0,0,.95); backdrop-filter:blur(20px); padding:24px; gap:16px; border-bottom:1px solid #18181b; }
+  .nav-links.open { display:flex; }
+  .hero { flex-direction:column; padding-top:100px; gap:40px; }
+  .hero-visual { width:100%; min-height:auto; }
+  .hero-card { max-width:100%; }
+  .hero h1 { font-size:36px; }
+  .footer-inner { grid-template-columns:1fr 1fr; }
+  .pricing-card.featured { margin-top:16px; }
+}
+
+/* Animations */
+.animate-in { opacity:0; transform:translateY(30px); transition:all .6s ease-out; }
+.animate-in.visible { opacity:1; transform:translateY(0); }
+.animate-in-left { opacity:0; transform:translateX(-30px); transition:all .6s ease-out; }
+.animate-in-left.visible { opacity:1; transform:translateX(0); }
+.animate-in-right { opacity:0; transform:translateX(30px); transition:all .6s ease-out; }
+.animate-in-right.visible { opacity:1; transform:translateX(0); }
+.delay-1 { transition-delay:.1s; }
+.delay-2 { transition-delay:.2s; }
+.delay-3 { transition-delay:.3s; }
+.delay-4 { transition-delay:.4s; }
+</style>
+</head>
+<body>
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+
+<!-- Navigation -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo"><span>proxymic</span><span>.</span></a>
+    <div class="nav-links" id="navLinks">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="/demo">Live Demo</a>
+      <a href="https://github.com/Arnab758/ai-real" target="_blank">GitHub</a>
+      <a href="/trial/signup" class="nav-cta">Start Free Trial</a>
+    </div>
+    <button class="mobile-menu-btn" onclick="toggleMobile()">☰</button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero-content">
+    <div class="hero-badge"><span class="hero-badge-dot"></span> Now supporting Groq, OpenAI & Anthropic</div>
+    <h1>Cut your LLM costs by <span>40-70%</span> instantly</h1>
+    <p>Proxymic is a semantic caching proxy for AI APIs. Drop it in front of any OpenAI-compatible provider and start saving with zero code changes. No credit card required.</p>
+    <div class="hero-actions">
+      <a href="/trial/signup" class="btn-primary">Start 4-Day Free Trial →</a>
+      <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-card">
+      <div class="hero-savings-badge">-55% savings</div>
+      <div class="hero-card-header">
+        <div class="hero-card-dots">
+          <span class="hero-card-dot red"></span>
+          <span class="hero-card-dot yellow"></span>
+          <span class="hero-card-dot green"></span>
+        </div>
+        <span class="hero-card-title">LIVE TRAFFIC</span>
+      </div>
+      <div class="hero-card-line">
+        <span class="hero-card-label">#1</span>
+        <span class="hero-card-value req">"Explain quantum..."</span>
+        <div class="hero-card-bar"><div class="hero-card-bar-fill miss" style="width:28%"></div></div>
+        <span class="hero-card-value miss">MISS</span>
+      </div>
+      <div class="hero-card-line">
+        <span class="hero-card-label">#2</span>
+        <span class="hero-card-value req">"What is the cap..."</span>
+        <div class="hero-card-bar"><div class="hero-card-bar-fill hit" style="width:72%"></div></div>
+        <span class="hero-card-value hit">HIT</span>
+      </div>
+      <div class="hero-card-line">
+        <span class="hero-card-label">#3</span>
+        <span class="hero-card-value req">"Compare Python..."</span>
+        <div class="hero-card-bar"><div class="hero-card-bar-fill hit" style="width:92%"></div></div>
+        <span class="hero-card-value hit">HIT</span>
+      </div>
+      <div class="hero-card-line">
+        <span class="hero-card-label">#4</span>
+        <span class="hero-card-value req">"How does cache..."</span>
+        <div class="hero-card-bar"><div class="hero-card-bar-fill hit" style="width:85%"></div></div>
+        <span class="hero-card-value hit">HIT</span>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #09090b;display:flex;justify-content:space-between;font-size:11px;color:#52525b;">
+        <span>Cache hit rate: <strong style="color:#34d399;">82%</strong></span>
+        <span>Tokens saved: <strong style="color:#60a5fa;">1.2K</strong></span>
+        <span>Cost saved: <strong style="color:#34d399;">$0.036</strong></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Bar -->
+<div class="stats-bar" id="stats">
+  <div class="stats-inner">
+    <div class="stat-item"><div class="stat-number purple" id="statReqs">—</div><div class="stat-label">Requests Processed</div></div>
+    <div class="stat-item"><div class="stat-number green" id="statTokens">—</div><div class="stat-label">Tokens Saved</div></div>
+    <div class="stat-item"><div class="stat-number green">40-70%</div><div class="stat-label">Avg Cost Savings</div></div>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="section" id="features">
+  <div class="section-label animate-in">Features</div>
+  <h2 class="section-title animate-in delay-1">Everything you need to <span style="background:linear-gradient(135deg,#8b5cf6,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">tame AI costs</span></h2>
+  <p class="section-sub animate-in delay-2">A single gateway that caches, protects, and monitors all your LLM API calls. Works with any OpenAI-compatible provider.</p>
+  <div class="features-grid">
+    <div class="feature-card animate-in delay-1">
+      <div class="feature-icon green">🧠</div>
+      <h3>Semantic Caching</h3>
+      <p>Cache responses based on meaning, not just exact matches. Similar questions share cached answers — saving 40-70% on API costs without sacrificing quality.</p>
+    </div>
+    <div class="feature-card animate-in delay-2">
+      <div class="feature-icon purple">⚡</div>
+      <h3>Zero Code Changes</h3>
+      <p>Just change your base URL to your Proxymic endpoint. No SDK changes, no code rewrites, no config nightmares.</p>
+    </div>
+    <div class="feature-card animate-in delay-3">
+      <div class="feature-icon blue">🛡️</div>
+      <h3>Agent Loop Protection</h3>
+      <p>Detect and block runaway AI agents before they burn through your budget. Real-time similarity tracking, frequency analysis, and automatic cooldowns.</p>
+    </div>
+    <div class="feature-card animate-in delay-1">
+      <div class="feature-icon yellow">🚦</div>
+      <h3>Rate Limiting</h3>
+      <p>Set per-tenant rate limits to prevent any single user from overwhelming your API budget. Redis-persisted limits survive restarts.</p>
+    </div>
+    <div class="feature-card animate-in delay-2">
+      <div class="feature-icon cyan">📊</div>
+      <h3>Real-Time Dashboard</h3>
+      <p>Watch your savings in real time. Cache hit rates, tokens saved, cost avoidance, and agent loop incidents — all live, all visible.</p>
+    </div>
+    <div class="feature-card animate-in delay-3">
+      <div class="feature-icon red">🔌</div>
+      <h3>Multi-Provider Support</h3>
+      <p>Works with OpenAI, Groq, Anthropic, and any OpenAI-compatible API. Primary + fallback providers with automatic circuit breaker.</p>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="section" id="how-it-works">
+  <div class="section-label animate-in">How It Works</div>
+  <h2 class="section-title animate-in delay-1">Get started in <span style="background:linear-gradient(135deg,#8b5cf6,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">under 60 seconds</span></h2>
+  <p class="section-sub animate-in delay-2">No SDKs. No config files. Just change one URL and add one header.</p>
+  <div class="steps">
+    <div class="step animate-in delay-1">
+      <div class="step-number">1</div>
+      <h3>Deploy the Gateway</h3>
+      <p>Run with Docker in one command, or deploy to Railway with one click. Point it at your LLM provider.</p>
+      <div class="step-arrow">→</div>
+    </div>
+    <div class="step animate-in delay-2">
+      <div class="step-number">2</div>
+      <h3>Change Your Base URL</h3>
+      <p>In your app code, replace your LLM base URL with your Proxymic endpoint. That's it.</p>
+      <div class="step-arrow">→</div>
+    </div>
+    <div class="step animate-in delay-3">
+      <div class="step-number">3</div>
+      <h3>Watch Savings Roll In</h3>
+      <p>Your dashboard shows real-time cache hit rates, tokens saved, and cost avoidance. Zero effort, maximum savings.</p>
+    </div>
+  </div>
+
+  <div class="code-demo animate-in">
+    <div class="code-demo-tabs">
+      <button class="code-demo-tab active" onclick="switchTab(this,'python')">Python</button>
+      <button class="code-demo-tab" onclick="switchTab(this,'node')">Node.js</button>
+      <button class="code-demo-tab" onclick="switchTab(this,'curl')">cURL</button>
+    </div>
+    <div class="code-demo-content" id="codePython">
+      <span class="comment"># Before: $200/month on API calls</span><br>
+      <span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI<br><br>
+      client = OpenAI(<br>
+      &nbsp;&nbsp;<span class="comment"># Change this one line:</span><br>
+      &nbsp;&nbsp;base_url=<span class="string">"https://ai-gateway-production-c86a.up.railway.app/v1"</span>,<br>
+      &nbsp;&nbsp;api_key=<span class="string">"sk-your-key"</span><br>
+      )<br>
+      client.extra_headers = {<br>
+      &nbsp;&nbsp;<span class="string">"X-Gateway-Token"</span>: <span class="string">"your-app-name"</span><br>
+      }<br><br>
+      <span class="comment"># After: ~$80/month with same traffic 🎉</span>
+    </div>
+    <div class="code-demo-content" id="codeNode" style="display:none;">
+      <span class="comment">// Before: $200/month on API calls</span><br>
+      <span class="keyword">const</span> response = <span class="keyword">await</span> fetch(<span class="string">"https://ai-gateway-production-c86a.up.railway.app/v1/chat/completions"</span>, {<br>
+      &nbsp;&nbsp;method: <span class="string">"POST"</span>,<br>
+      &nbsp;&nbsp;headers: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"Content-Type"</span>: <span class="string">"application/json"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"Authorization"</span>: <span class="string">"Bearer sk-your-key"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Add this one line:</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"X-Gateway-Token"</span>: <span class="string">"your-app-name"</span><br>
+      &nbsp;&nbsp;}<br>
+      })<br><br>
+      <span class="comment">// After: ~$80/month with same traffic 🎉</span>
+    </div>
+    <div class="code-demo-content" id="codeCurl" style="display:none;">
+      <span class="comment"># Before: $200/month on API calls</span><br>
+      curl -X POST <span class="string">"https://ai-gateway-production-c86a.up.railway.app/v1/chat/completions"</span> \\<br>
+      &nbsp;&nbsp;-H <span class="string">"Content-Type: application/json"</span> \\<br>
+      &nbsp;&nbsp;-H <span class="string">"Authorization: Bearer sk-your-key"</span> \\<br>
+      &nbsp;&nbsp;<span class="comment"># Add this one header:</span><br>
+      &nbsp;&nbsp;-H <span class="string">"X-Gateway-Token: your-app-name"</span> \\<br>
+      &nbsp;&nbsp;-d <span class="string">'{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}'</span><br><br>
+      <span class="comment"># After: ~$80/month with same traffic 🎉</span>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="section" id="pricing">
+  <div class="section-label animate-in">Pricing</div>
+  <h2 class="section-title animate-in delay-1">Simple, transparent pricing</h2>
+  <p class="section-sub animate-in delay-2">Start free. Scale as you grow. No hidden fees, no surprise bills.</p>
+  <div class="pricing-grid">
+    <div class="pricing-card animate-in delay-1">
+      <div class="pricing-name">Free Trial</div>
+      <div class="pricing-price">$0<span>/mo</span></div>
+      <p class="pricing-desc">See exactly how much you'd save with your actual traffic patterns.</p>
+      <ul class="pricing-features">
+        <li>4-day trial, no credit card</li>
+        <li>Real traffic analysis</li>
+        <li>Live savings dashboard</li>
+        <li>Agent loop detection</li>
+        <li class="muted">Active caching (observer mode)</li>
+        <li class="muted">Multi-tenant support</li>
+        <li class="muted">Priority support</li>
+      </ul>
+      <a href="/trial/signup" class="pricing-cta secondary">Start Free →</a>
+    </div>
+    <div class="pricing-card featured animate-in delay-2">
+      <div class="pricing-name">Pro</div>
+      <div class="pricing-price">$49<span>/mo</span></div>
+      <p class="pricing-desc">Active semantic caching with full features. For startups and small teams.</p>
+      <ul class="pricing-features">
+        <li>Active semantic caching</li>
+        <li>Up to 100K requests/day</li>
+        <li>Real-time dashboard</li>
+        <li>Agent loop protection</li>
+        <li>Rate limiting & throttling</li>
+        <li>Multi-tenant support (5 tenants)</li>
+        <li>Email support</li>
+      </ul>
+      <a href="/trial/signup" class="pricing-cta primary">Start Free Trial →</a>
+    </div>
+    <div class="pricing-card animate-in delay-3">
+      <div class="pricing-name">Enterprise</div>
+      <div class="pricing-price">Custom</div>
+      <p class="pricing-desc">For teams that need dedicated infrastructure, SSO, and custom contracts.</p>
+      <ul class="pricing-features">
+        <li>Unlimited requests</li>
+        <li>Dedicated instance</li>
+        <li>Custom rate limits & tiers</li>
+        <li>SSO / SAML</li>
+        <li>Unlimited tenants</li>
+        <li>99.99% SLA</li>
+        <li>Priority support & onboarding</li>
+      </ul>
+      <a href="mailto:devarnab111@gmail.com" class="pricing-cta secondary">Contact Sales →</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="animate-in">Ready to cut your AI costs?</h2>
+  <p class="animate-in delay-1">Start your free trial and see exactly how much you'd save with your actual traffic patterns. No credit card needed.</p>
+  <div class="cta-actions animate-in delay-2">
+    <a href="/trial/signup" class="btn-primary">Start Free Trial →</a>
+    <a href="/demo" class="btn-secondary">Try Live Demo →</a>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="section-label animate-in">FAQ</div>
+  <h2 class="section-title animate-in delay-1">Frequently asked questions</h2>
+  <div class="faq-list">
+    <div class="faq-item animate-in delay-1" onclick="toggleFaq(this)">
+      <div class="faq-question">How does semantic caching work? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">Proxymic converts each request into an embedding vector and compares it against previously cached responses. When a new request is semantically similar (above 95% threshold), we serve the cached response instead of calling the LLM API. This catches paraphrased questions, similar code patterns, and repeated queries — all without your users noticing any difference.</div>
+    </div>
+    <div class="faq-item animate-in delay-2" onclick="toggleFaq(this)">
+      <div class="faq-question">Will this affect the quality of responses? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">No. When we serve a cached response, it's an identical response to what the LLM would have returned. The similarity threshold is configurable — you can set it as high as 99.9% for strict matching, or lower for more aggressive caching. During the 4-day trial, we only observe your traffic and show what would have been cached, so you can verify the quality before committing.</div>
+    </div>
+    <div class="faq-item animate-in delay-3" onclick="toggleFaq(this)">
+      <div class="faq-question">What LLM providers do you support? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">Any OpenAI-compatible API. This includes OpenAI, Groq, Anthropic via their API-compatible endpoints, Together AI, Fireworks, Perplexity, and more. We support primary + fallback providers with automatic failover and circuit breaker.</div>
+    </div>
+    <div class="faq-item animate-in delay-1" onclick="toggleFaq(this)">
+      <div class="faq-question">What's the difference between observer mode and active caching? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">In observer mode (free trial), Proxymic watches your traffic silently. It records which requests would have been cache hits, how many tokens you would have saved, and your projected cost savings — but it always forwards requests to the LLM. In active mode (Pro plan), we actually serve cached responses, cutting your API calls by 40-70% immediately.</div>
+    </div>
+    <div class="faq-item animate-in delay-2" onclick="toggleFaq(this)">
+      <div class="faq-question">How do I deploy Proxymic? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">The easiest way is one-click deploy on Railway. You can also run it locally with Docker. Full deployment guide is on our GitHub README.</div>
+    </div>
+    <div class="faq-item animate-in delay-3" onclick="toggleFaq(this)">
+      <div class="faq-question">What happens when my trial ends? <span class="faq-arrow">▼</span></div>
+      <div class="faq-answer">Your trial dashboard shows all the savings data collected during the 4-day period. Your app continues to work normally — the proxy simply stops tracking metrics. To continue saving, upgrade to a Pro plan. We'll send a reminder email before your trial expires.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" style="font-size:18px;font-weight:800;text-decoration:none;"><span style="color:#8b5cf6;">proxymic</span><span style="color:#52525b;">.</span></a>
+      <p>The semantic caching proxy that cuts your LLM API costs by 40-70%. Built for developers who'd rather spend on product than on API bills.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="/trial/signup">Free Trial</a>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <a href="https://github.com/Arnab758/ai-real" target="_blank">GitHub</a>
+      <a href="/demo">Live Demo</a>
+      <a href="https://github.com/Arnab758/ai-real" target="_blank">Documentation</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <a href="mailto:devarnab111@gmail.com">Contact</a>
+      <a href="https://github.com/Arnab758">GitHub</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Proxymic. Built with ❤️ for developers who hate wasting money on API calls.</p>
+    <p>Made in India 🇮🇳</p>
+  </div>
+</footer>
+
+<script>
+// Mobile menu
+function toggleMobile() {
+  document.getElementById('navLinks').classList.toggle('open');
+  document.querySelector('.mobile-menu-btn').style.display = 'block';
+}
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.animate-in, .animate-in-left, .animate-in-right').forEach(el => observer.observe(el));
+
+// Code demo tabs
+function switchTab(btn, lang) {
+  document.querySelectorAll('.code-demo-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.code-demo-content').forEach(c => c.style.display = 'none');
+  document.getElementById('code' + lang.charAt(0).toUpperCase() + lang.slice(1)).style.display = 'block';
+}
+
+// FAQ toggle
+function toggleFaq(item) {
+  item.classList.toggle('open');
+}
+
+// Live stats
+async function loadStats() {
+  try {
+    const r = await fetch('/api/landing-stats');
+    const d = await r.json();
+    if (d.requests_processed) document.getElementById('statReqs').textContent = d.requests_processed;
+    if (d.tokens_saved) document.getElementById('statTokens').textContent = d.tokens_saved;
+  } catch(e) {}
+}
+loadStats();
+</script>
+</body>
+</html>

@@ -117,6 +117,7 @@ func main() {
 	http.HandleFunc("/metrics", handleMetrics)
 	http.HandleFunc("/stats", handleStats)
 	http.HandleFunc("/demo", handleDemo)
+	http.HandleFunc("/api/landing-stats", handleLandingStats)
 	http.HandleFunc("/api/deployed", func(w http.ResponseWriter, r *http.Request) {
 		tenant := r.Header.Get("X-Gateway-Token")
 		log.Printf("🚀 DEPLOYMENT DETECTED: tenant=%s, ip=%s, time=%s",
