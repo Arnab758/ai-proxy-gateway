@@ -16,8 +16,6 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /app/ai-gateway .
 COPY --from=builder /app/gateway.yaml .
-COPY --from=builder /app/demo.html .
-COPY --from=builder /app/dashboard.html .
 
 EXPOSE 8080
 EXPOSE 9090

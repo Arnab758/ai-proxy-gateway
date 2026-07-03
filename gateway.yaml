@@ -4,7 +4,7 @@ gateway:
   log_level: info
 
 cache:
-  redis_url: "redis://default:aCpbRRQUlJmNXsxutnlxNnDYdmAmDGtZ@redis.railway.internal:6379"
+  redis_url: "redis://localhost:6379"  # Override with REDIS_URL env var
   vector:
     enabled: true
     dimension: 64         # Embedding vector dimension (reduced from 128 for speed)
