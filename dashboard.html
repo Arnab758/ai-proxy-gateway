@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proxymic — Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:#000; color:#a1a1aa; min-height:100vh; }
+.container { max-width:1000px; margin:0 auto; padding:24px; }
+.header { display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #18181b; margin-bottom:24px; }
+.header-logo { font-size:20px; font-weight:700; }
+.header-logo span:first-child { color:#8b5cf6; }
+.header-logo span:last-child { color:#52525b; }
+.header-links { display:flex; gap:16px; align-items:center; }
+.header-links a { color:#71717a; text-decoration:none; font-size:13px; transition:color .2s; }
+.header-links a:hover { color:#fafafa; }
+
+h1 { color:#fafafa; font-size:28px; font-weight:700; margin-bottom:4px; }
+.subtitle { color:#71717a; font-size:14px; margin-bottom:24px; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:#09090b; border:1px solid #18181b; border-radius:12px; padding:20px; text-align:center; transition:border-color .2s; }
+.stat-card:hover { border-color:#27272a; }
+.stat-value { font-size:28px; font-weight:800; color:#fafafa; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.stat-value.green { color:#34d399; }
+.stat-value.purple { color:#a78bfa; }
+.stat-value.blue { color:#60a5fa; }
+.stat-value.amber { color:#fbbf24; }
+.stat-label { color:#52525b; font-size:11px; margin-top:4px; text-transform:uppercase; letter-spacing:1px; }
+
+.card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; margin-bottom:16px; }
+.card h2 { color:#fafafa; font-size:16px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+.setup-code { background:#000; border:1px solid #27272a; border-radius:10px; padding:16px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#a1a1aa; line-height:1.8; overflow-x:auto; margin-bottom:12px; }
+.setup-code .comment { color:#52525b; }
+.setup-code .key { color:#8b5cf6; }
+.setup-code .value { color:#34d399; }
+
+.copy-btn { padding:8px 16px; background:transparent; border:1px solid #27272a; color:#a1a1aa; border-radius:8px; cursor:pointer; font-size:12px; transition:all .2s; }
+.copy-btn:hover { border-color:#8b5cf6; color:#fafafa; }
+
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; padding:10px 12px; font-size:11px; color:#52525b; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #18181b; }
+td { padding:10px 12px; font-size:12px; border-bottom:1px solid #09090b; color:#a1a1aa; }
+tr:hover td { background:#0f0f0f; }
+
+.badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; }
+.badge.hit { background:rgba(52,211,153,.15); color:#34d399; }
+.badge.miss { background:rgba(239,68,68,.15); color:#ef4444; }
+
+.refresh-btn { padding:8px 20px; background:transparent; border:1px solid #27272a; color:#71717a; border-radius:8px; cursor:pointer; font-size:13px; }
+.refresh-btn:hover { border-color:#3f3f46; color:#a1a1aa; }
+
+.footer { text-align:center; padding:24px; color:#3f3f46; font-size:12px; border-top:1px solid #18181b; margin-top:32px; }
+
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#09090b; border:1px solid #27272a; color:#34d399; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:600; z-index:1000; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+
+.progress-bar { width:100%; height:8px; background:#18181b; border-radius:4px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:4px; transition:width .5s; background:linear-gradient(90deg,#34d399,#8b5cf6); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-logo"><span>proxymic</span><span>.</span></div>
+    <div class="header-links">
+      <a href="/">Home</a>
+      <a href="/demo">Demo</a>
+      <a href="/benchmarks">Benchmarks</a>
+      <a href="https://github.com/Arnab758/ai-real" target="_blank">GitHub</a>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+    <div>
+      <h1>System Dashboard</h1>
+      <p class="subtitle">Live analytics from your AI Gateway instance</p>
+    </div>
+    <button class="refresh-btn" onclick="loadDashboard()">🔄 Refresh</button>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value purple" id="totalReqs">0</div>
+      <div class="stat-label">Total Requests</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="cacheHits">0</div>
+      <div class="stat-label">Cache Hits</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue" id="hitRate">0%</div>
+      <div class="stat-label">Hit Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="tokensSaved">0</div>
+      <div class="stat-label">Tokens Saved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value amber" id="savings">$0.00</div>
+      <div class="stat-label">Est. Savings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue" id="tenants">0</div>
+      <div class="stat-label">Active Tenants</div>
+    </div>
+  </div>
+
+  <!-- Hit Rate Progress -->
+  <div class="card">
+    <h2>📊 Cache Performance</h2>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+      <span style="color:#71717a;font-size:13px;">Cache Hit Rate</span>
+      <span style="color:#34d399;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;" id="hitRateDisplay">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="hitRateBar" style="width:0%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;">
+      <div><span style="color:#52525b;font-size:11px;">Hits</span><br><span style="color:#34d399;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;" id="hitsCount">0</span></div>
+      <div style="text-align:center;"><span style="color:#52525b;font-size:11px;">Total</span><br><span style="color:#fafafa;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;" id="totalCount">0</span></div>
+      <div style="text-align:right;"><span style="color:#52525b;font-size:11px;">Misses</span><br><span style="color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;" id="missesCount">0</span></div>
+    </div>
+  </div>
+
+  <!-- Setup Instructions -->
+  <div class="card">
+    <h2>🚀 Quick Setup</h2>
+    <p style="color:#71717a;font-size:13px;margin-bottom:12px;">Change one line of code to start caching:</p>
+    <div class="setup-code">
+      <span class="comment"># Python (OpenAI SDK)</span><br>
+      <span class="key">from</span> openai <span class="key">import</span> OpenAI<br><br>
+      client = OpenAI(<br>
+      &nbsp;&nbsp;base_url=<span class="value">"https://ai-gateway-production-c86a.up.railway.app/v1"</span>,<br>
+      &nbsp;&nbsp;api_key=<span class="value">"sk-your-api-key"</span><br>
+      )<br>
+      client.<span class="key">extra_headers</span> = {<br>
+      &nbsp;&nbsp;<span class="value">"X-Gateway-Token"</span>: <span class="value">"my-app"</span><br>
+      }
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="copy-btn" onclick="copyPython()">📋 Copy Python</button>
+      <button class="copy-btn" onclick="copyCurl()">📋 Copy cURL</button>
+      <button class="copy-btn" onclick="copyNode()">📋 Copy Node.js</button>
+    </div>
+  </div>
+
+  <!-- Recent Requests Log -->
+  <div class="card">
+    <h2>📋 Recent Requests</h2>
+    <p style="color:#71717a;font-size:13px;margin-bottom:12px;">Last 50 requests processed by the gateway.</p>
+    <div id="logsContainer">
+      <div style="text-align:center;padding:40px;color:#3f3f46;font-size:13px;">Loading requests...</div>
+    </div>
+  </div>
+
+  <!-- Uptime -->
+  <div class="card" style="text-align:center;">
+    <span style="color:#52525b;font-size:12px;">Gateway Uptime</span><br>
+    <span style="color:#34d399;font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;" id="uptime">0s</span>
+  </div>
+</div>
+
+<div class="footer">
+  Proxymic AI Gateway — Built with Go + Redis. <a href="/trial/signup" style="color:#8b5cf6;text-decoration:none;">Start free trial</a>
+</div>
+
+<script>
+let startTime = Date.now();
+
+async function loadDashboard() {
+  try {
+    const r = await fetch('/api/analytics');
+    const d = await r.json();
+    if (!d.local) return;
+
+    const l = d.local;
+    document.getElementById('totalReqs').textContent = l.total_requests.toLocaleString();
+    document.getElementById('cacheHits').textContent = l.cache_hits.toLocaleString();
+    document.getElementById('hitRate').textContent = l.hit_rate_percent.toFixed(1) + '%';
+    document.getElementById('hitRateDisplay').textContent = l.hit_rate_percent.toFixed(1) + '%';
+    document.getElementById('hitRateBar').style.width = Math.min(l.hit_rate_percent, 100) + '%';
+    document.getElementById('tokensSaved').textContent = l.tokens_saved.toLocaleString();
+    document.getElementById('savings').textContent = l.estimated_savings;
+    document.getElementById('tenants').textContent = l.tenant_count;
+    document.getElementById('hitsCount').textContent = l.cache_hits.toLocaleString();
+    document.getElementById('totalCount').textContent = l.total_requests.toLocaleString();
+    document.getElementById('missesCount').textContent = l.cache_misses.toLocaleString();
+
+    // Update uptime
+    const uptime = Math.floor((Date.now() - startTime) / 1000);
+    const hours = Math.floor(uptime / 3600);
+    const mins = Math.floor((uptime % 3600) / 60);
+    const secs = uptime % 60;
+    document.getElementById('uptime').textContent = hours + 'h ' + mins + 'm ' + secs + 's';
+
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+  }
+}
+
+async function loadLogs() {
+  try {
+    const r = await fetch('/api/logs?limit=50');
+    const d = await r.json();
+    if (!d.logs || d.logs.length === 0) {
+      document.getElementById('logsContainer').innerHTML = '<div style="text-align:center;padding:40px;color:#3f3f46;font-size:13px;">No requests yet. Send a test request to see it here.</div>';
+      return;
+    }
+
+    let html = `<table>
+      <tr><th>Time</th><th>Tenant</th><th>Status</th><th>Match</th><th>Confidence</th><th>Latency</th><th>Saved</th></tr>`;
+
+    d.logs.forEach(log => {
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const statusClass = log.cache_status === 'HIT' ? 'hit' : 'miss';
+      const matchType = log.match_type || '—';
+      const confidence = log.confidence ? (log.confidence * 100).toFixed(1) + '%' : '—';
+      const saved = log.tokens_saved > 0 ? log.tokens_saved + ' tokens' : '—';
+      html += `<tr>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#52525b;">${time}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;">${log.tenant_id?.substring(0, 20) || '—'}</td>
+        <td><span class="badge ${statusClass}">${log.cache_status}</span></td>
+        <td style="font-size:11px;color:#71717a;">${matchType}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;">${confidence}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;">${log.latency_ms}ms</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#34d399;">${saved}</td>
+      </tr>`;
+    });
+
+    html += '</table>';
+    document.getElementById('logsContainer').innerHTML = html;
+
+  } catch(e) {
+    document.getElementById('logsContainer').innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444;font-size:13px;">Failed to load request logs.</div>';
+  }
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function copyPython() {
+  const code = `from openai import OpenAI\n\nclient = OpenAI(\n    base_url="https://ai-gateway-production-c86a.up.railway.app/v1",\n    api_key="sk-your-api-key"\n)\nclient.extra_headers = {\n    "X-Gateway-Token": "my-app"\n}`;
+  navigator.clipboard.writeText(code).then(() => showToast('Python code copied!'));
+}
+
+function copyCurl() {
+  const code = `curl -X POST https://ai-gateway-production-c86a.up.railway.app/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -H "X-Gateway-Token: my-app" \\\n  -d '{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}'`;
+  navigator.clipboard.writeText(code).then(() => showToast('cURL command copied!'));
+}
+
+function copyNode() {
+  const code = `const OpenAI = require('openai');\n\nconst client = new OpenAI({\n  baseURL: 'https://ai-gateway-production-c86a.up.railway.app/v1',\n  apiKey: 'sk-your-api-key',\n  defaultHeaders: { 'X-Gateway-Token': 'my-app' }\n});`;
+  navigator.clipboard.writeText(code).then(() => showToast('Node.js code copied!'));
+}
+
+// Load on page load and refresh every 10s
+loadDashboard();
+loadLogs();
+setInterval(loadDashboard, 10000);
+setInterval(loadLogs, 15000);
+</script>
+</body>
+</html>

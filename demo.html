@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proxymic — Live Interactive Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:#000; color:#a1a1aa; min-height:100vh; }
+.container { max-width:900px; margin:0 auto; padding:24px; }
+.header { display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #18181b; margin-bottom:24px; }
+.header-logo { font-size:20px; font-weight:700; }
+.header-logo span:first-child { color:#8b5cf6; }
+.header-logo span:last-child { color:#52525b; }
+.header-links { display:flex; gap:16px; align-items:center; }
+.header-links a { color:#71717a; text-decoration:none; font-size:13px; transition:color .2s; }
+.header-links a:hover { color:#fafafa; }
+
+.hero { text-align:center; padding:60px 20px 40px; }
+.hero h1 { font-size:clamp(28px,4vw,44px); font-weight:800; color:#fafafa; margin-bottom:12px; letter-spacing:-1px; }
+.hero h1 span { background:linear-gradient(135deg,#8b5cf6,#34d399); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero p { color:#71717a; font-size:15px; max-width:500px; margin:0 auto 24px; line-height:1.7; }
+
+.card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; margin-bottom:16px; }
+.card h2 { color:#fafafa; font-size:16px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.card p { color:#71717a; font-size:13px; line-height:1.7; margin-bottom:12px; }
+
+.setup-code { background:#000; border:1px solid #27272a; border-radius:10px; padding:16px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#a1a1aa; line-height:1.8; overflow-x:auto; margin-bottom:12px; }
+.setup-code .comment { color:#52525b; }
+.setup-code .key { color:#8b5cf6; }
+.setup-code .value { color:#34d399; }
+
+.copy-btn { padding:8px 16px; background:transparent; border:1px solid #27272a; color:#a1a1aa; border-radius:8px; cursor:pointer; font-size:12px; transition:all .2s; }
+.copy-btn:hover { border-color:#8b5cf6; color:#fafafa; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:24px; }
+.stat-card { background:#09090b; border:1px solid #18181b; border-radius:12px; padding:20px; text-align:center; transition:border-color .2s; }
+.stat-card:hover { border-color:#27272a; }
+.stat-value { font-size:32px; font-weight:800; color:#fafafa; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.stat-value.green { color:#34d399; }
+.stat-value.purple { color:#a78bfa; }
+.stat-label { color:#52525b; font-size:12px; margin-top:6px; }
+
+.demo-btn { display:inline-flex; align-items:center; gap:8px; padding:14px 28px; background:#8b5cf6; color:#fff; border-radius:10px; font-size:15px; font-weight:600; text-decoration:none; transition:all .2s; }
+.demo-btn:hover { background:#7c3aed; transform:translateY(-2px); box-shadow:0 4px 20px rgba(139,92,246,.3); }
+
+.footer { text-align:center; padding:24px; color:#3f3f46; font-size:12px; border-top:1px solid #18181b; margin-top:32px; }
+
+.api-input { width:100%; padding:12px 16px; background:#000; border:1px solid #27272a; border-radius:10px; color:#fafafa; font-size:14px; outline:none; transition:border-color .2s; font-family:'JetBrains Mono',monospace; }
+.api-input:focus { border-color:#8b5cf6; }
+.api-input::placeholder { color:#3f3f46; }
+
+.chat-box { background:#000; border:1px solid #27272a; border-radius:10px; padding:16px; max-height:300px; overflow-y:auto; margin-bottom:12px; }
+.chat-msg { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:13px; line-height:1.5; }
+.chat-msg.user { background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.2); color:#c4b5fd; }
+.chat-msg.assistant { background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.2); color:#6ee7b7; }
+.chat-msg .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; margin-left:8px; }
+.chat-msg .badge.hit { background:rgba(52,211,153,.2); color:#34d399; }
+.chat-msg .badge.miss { background:rgba(239,68,68,.2); color:#ef4444; }
+.chat-msg .meta { font-size:11px; color:#52525b; margin-top:4px; }
+
+.send-btn { padding:12px 24px; background:#8b5cf6; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.send-btn:hover { background:#7c3aed; }
+.send-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.loading-dots::after { content:''; animation:dots 1.5s steps(4,end) infinite; }
+@keyframes dots { 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} 100%{content:'';} }
+
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#09090b; border:1px solid #27272a; color:#34d399; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:600; z-index:1000; box-shadow:0 4px 24px rgba(0,0,0,.5); transition:opacity .3s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-logo"><span>proxymic</span><span>.</span></div>
+    <div class="header-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/benchmarks">Benchmarks</a>
+      <a href="https://github.com/Arnab758/ai-real" target="_blank">GitHub</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1>Try Proxymic <span>Live</span></h1>
+    <p>See how semantic caching cuts LLM API costs in real-time. Change one line of code, start saving immediately.</p>
+    <a href="/trial/signup" class="demo-btn">Start Free Trial →</a>
+  </div>
+
+  <!-- Live Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value purple" id="statReqs">—</div>
+      <div class="stat-label">Requests Monitored</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="statHits">—</div>
+      <div class="stat-label">Cache Hits</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="statSavings">—</div>
+      <div class="stat-label">Tokens Saved</div>
+    </div>
+  </div>
+
+  <!-- Live Demo: API Key + Chat -->
+  <div class="card">
+    <h2>🔑 Try It Now — Send a Request</h2>
+    <p>Paste your Groq API key below and send a message. We'll proxy it through the gateway and show you whether it was a cache HIT or MISS.</p>
+    <div style="margin-bottom:12px;">
+      <input type="password" id="apiKeyInput" class="api-input" placeholder="gsk_your_groq_api_key" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" id="messageInput" class="api-input" placeholder="What is the capital of France?" value="What is the capital of France?" style="flex:1;" onkeydown="if(event.key==='Enter') sendMessage()">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+    </div>
+    <div class="chat-box" id="chatBox">
+      <div style="color:#3f3f46;font-size:13px;text-align:center;padding:40px 0;">Enter your API key and send a message to see live caching in action.</div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <span style="font-size:12px;color:#52525b;" id="sessionSavings">Total saved this session: <strong style="color:#34d399;">$0.00</strong></span>
+      <button class="copy-btn" onclick="copyPython()">📋 Copy Python Setup</button>
+      <button class="copy-btn" onclick="copyCurl()">📋 Copy cURL</button>
+    </div>
+  </div>
+
+  <!-- How to Connect -->
+  <div class="card">
+    <h2>🚀 Connect Your App</h2>
+    <p>Change your OpenAI base URL to point at Proxymic and add one HTTP header:</p>
+    <div class="setup-code">
+      <span class="comment"># Python (OpenAI SDK)</span><br>
+      <span class="key">from</span> openai <span class="key">import</span> OpenAI<br><br>
+      client = OpenAI(<br>
+      &nbsp;&nbsp;base_url=<span class="value">"https://ai-gateway-production-c86a.up.railway.app/v1"</span>,<br>
+      &nbsp;&nbsp;api_key=<span class="value">"sk-your-api-key"</span><br>
+      )<br>
+      client.<span class="key">extra_headers</span> = {<br>
+      &nbsp;&nbsp;<span class="value">"X-Gateway-Token"</span>: <span class="value">"my-app"</span><br>
+      }
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="copy-btn" onclick="copyPython()">📋 Copy Python</button>
+      <button class="copy-btn" onclick="copyCurl()">📋 Copy cURL</button>
+    </div>
+  </div>
+
+  <!-- Performance -->
+  <div class="card">
+    <h2>⚡ Performance</h2>
+    <p>Latest benchmark results from a single Railway instance with Redis:</p>
+    <div class="setup-code" style="font-size:11px;">
+      <span class="comment">$ hey -n 2000 -c 50 https://ai-gateway-production-c86a.up.railway.app/health</span><br><br>
+      <span class="key">Requests/sec:</span>  <span class="value">12,753</span><br>
+      <span class="key">Avg latency:</span>   <span class="value">3.6ms</span><br>
+      <span class="key">P99 latency:</span>   <span class="value">37.6ms</span><br>
+      <span class="key">200 OK:</span>         <span class="value">2,000/2,000</span>
+    </div>
+    <p>Full comparison: <a href="/benchmarks" style="color:#8b5cf6;text-decoration:none;">View benchmarks →</a></p>
+  </div>
+
+  <!-- Features -->
+  <div class="card">
+    <h2>🧠 Key Features</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+      <div style="padding:16px;background:#000;border-radius:10px;border:1px solid #18181b;">
+        <p style="color:#fafafa;font-weight:600;margin-bottom:4px;">Semantic Caching</p>
+        <p style="font-size:12px;color:#52525b;">Cache by meaning, not exact match. 40-70% savings.</p>
+      </div>
+      <div style="padding:16px;background:#000;border-radius:10px;border:1px solid #18181b;">
+        <p style="color:#fafafa;font-weight:600;margin-bottom:4px;">Zero Code Changes</p>
+        <p style="font-size:12px;color:#52525b;">Just change base URL. No SDK, no config changes.</p>
+      </div>
+      <div style="padding:16px;background:#000;border-radius:10px;border:1px solid #18181b;">
+        <p style="color:#fafafa;font-weight:600;margin-bottom:4px;">Agent Loop Protection</p>
+        <p style="font-size:12px;color:#52525b;">Detect and block runaway AI agents automatically.</p>
+      </div>
+      <div style="padding:16px;background:#000;border-radius:10px;border:1px solid #18181b;">
+        <p style="color:#fafafa;font-weight:600;margin-bottom:4px;">Real-Time Dashboard</p>
+        <p style="font-size:12px;color:#52525b;">Live cache hit rates, tokens saved, cost avoidance.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Proxymic AI Gateway — Built with Go + Redis. <a href="/trial/signup" style="color:#8b5cf6;text-decoration:none;">Start free trial</a>
+</div>
+
+<script>
+const BASE_URL = 'https://ai-gateway-production-c86a.up.railway.app';
+let sessionTotalSavings = 0;
+
+async function loadStats() {
+  try {
+    const r = await fetch('/api/analytics');
+    const d = await r.json();
+    if (d.local) {
+      document.getElementById('statReqs').textContent = d.local.total_requests.toLocaleString();
+      document.getElementById('statHits').textContent = d.local.cache_hits.toLocaleString();
+      document.getElementById('statSavings').textContent = d.local.tokens_saved.toLocaleString();
+    }
+  } catch(e) {}
+}
+loadStats();
+setInterval(loadStats, 10000);
+
+async function sendMessage() {
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+  const message = document.getElementById('messageInput').value.trim();
+  if (!apiKey) { showToast('Please enter a Groq API key'); return; }
+  if (!message) { showToast('Please enter a message'); return; }
+
+  const chatBox = document.getElementById('chatBox');
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending...';
+
+  // Add user message
+  chatBox.innerHTML += `<div class="chat-msg user"><strong>You:</strong> ${escapeHtml(message)}</div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // Add loading message
+  chatBox.innerHTML += `<div class="chat-msg assistant" id="loadingMsg"><strong>Proxymic:</strong> <span class="loading-dots">Thinking</span></div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  const startTime = performance.now();
+
+  try {
+    const payload = {
+      model: 'mixtral-8x7b-32768',
+      messages: [{ role: 'user', content: message }],
+      max_tokens: 100
+    };
+
+    const res = await fetch(BASE_URL + '/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'X-Gateway-Token': 'demo-user'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const latency = Math.round(performance.now() - startTime);
+    const cacheStatus = res.headers.get('X-Gateway-Cache') || 'MISS';
+    const confidence = res.headers.get('X-Gateway-Confidence') || '';
+    const matchType = res.headers.get('X-Gateway-Match-Type') || '';
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || JSON.stringify(data);
+
+    // Remove loading message
+    const loadingMsg = document.getElementById('loadingMsg');
+    if (loadingMsg) loadingMsg.remove();
+
+    const isHit = cacheStatus === 'HIT';
+    const badge = isHit ? 'HIT' : 'MISS';
+    const tokensSaved = isHit ? Math.round(content.length / 4) : 0;
+    const costSaved = tokensSaved / 1000 * 0.03;
+
+    if (isHit) sessionTotalSavings += costSaved;
+    document.getElementById('sessionSavings').innerHTML = `Total saved this session: <strong style="color:#34d399;">$${sessionTotalSavings.toFixed(4)}</strong>`;
+
+    let metaParts = [`⚡ ${latency}ms`];
+    if (confidence) metaParts.push(`🎯 ${(parseFloat(confidence)*100).toFixed(1)}%`);
+    if (matchType) metaParts.push(`📋 ${matchType}`);
+
+    chatBox.innerHTML += `<div class="chat-msg assistant">
+      <strong>Proxymic:</strong> ${escapeHtml(content.substring(0, 300))}
+      <span class="badge ${isHit ? 'hit' : 'miss'}">${badge}</span>
+      ${isHit ? `<span style="font-size:11px;color:#34d399;">💰 saved $${costSaved.toFixed(4)}</span>` : ''}
+      <div class="meta">${metaParts.join(' · ')}</div>
+    </div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+  } catch(err) {
+    const loadingMsg = document.getElementById('loadingMsg');
+    if (loadingMsg) loadingMsg.remove();
+    chatBox.innerHTML += `<div class="chat-msg" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;">
+      <strong>Error:</strong> ${escapeHtml(err.message)}<br>
+      <span style="font-size:11px;color:#52525b;">Make sure your API key is correct and the gateway is running.</span>
+    </div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Send';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function copyPython() {
+  const code = `from openai import OpenAI\n\nclient = OpenAI(\n    base_url="https://ai-gateway-production-c86a.up.railway.app/v1",\n    api_key="sk-your-api-key"\n)\nclient.extra_headers = {\n    "X-Gateway-Token": "my-app"\n}`;
+  navigator.clipboard.writeText(code).then(() => showToast('Python code copied!'));
+}
+
+function copyCurl() {
+  const code = `curl -X POST https://ai-gateway-production-c86a.up.railway.app/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer $API_KEY" \\\n  -H "X-Gateway-Token: my-app" \\\n  -d '{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}'`;
+  navigator.clipboard.writeText(code).then(() => showToast('cURL command copied!'));
+}
+</script>
+</body>
+</html>
