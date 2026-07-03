@@ -1,0 +1,54 @@
+# AI Gateway Configuration
+gateway:
+  port: 8080
+  log_level: info
+
+cache:
+  redis_url: "redis://default:aCpbRRQUlJmNXsxutnlxNnDYdmAmDGtZ@redis.railway.internal:6379"
+  vector:
+    enabled: true
+    dimension: 64         # Embedding vector dimension (reduced from 128 for speed)
+    similarity_threshold: 0.95  # Cosine similarity threshold (higher = stricter matching)
+    max_vectors_per_tenant: 10000
+    exact_hash_first: true  # Try exact hash match before vector search
+  jaccard:
+    enabled: true         # Fallback to Jaccard similarity
+    threshold: 0.75
+  ttl_hours: 24
+  template_matching:
+    enabled: true
+    max_templates: 1000
+
+rate_limiter:
+  enabled: true
+  max_requests: 60
+  window_minutes: 1
+
+upstream:
+  primary:
+    provider: "groq"
+    base_url: "https://api.groq.com/openai/v1"
+    timeout_seconds: 10
+    max_retries: 1
+  fallback:
+    provider: "openai"
+    base_url: "https://api.openai.com/v1"
+    timeout_seconds: 10
+  circuit_breaker:
+    enabled: false
+    failure_threshold: 5
+    recovery_timeout_seconds: 30
+
+deduplication:
+  enabled: true
+  lock_ttl_seconds: 10
+  max_wait_seconds: 30
+
+telemetry:
+  enabled: true
+  metrics_port: 9090
+
+observer:
+  enabled: true
+  trial_duration_hours: 96
+  contact_sales_url: ""

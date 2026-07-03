@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - UPSTREAM_API_KEY=${UPSTREAM_API_KEY:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped

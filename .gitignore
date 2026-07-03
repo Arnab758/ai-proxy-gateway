@@ -1,0 +1,36 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+ai-gateway
+
+# Test binary
+*.test
+
+# Go workspace
+go.work
+go.work.sum
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ChatGPT-Next-Web (open source app for testing)
+ChatGPT-Next-Web/
+
+# Dependencies
+/vendor/
+
+# Coverage
+coverage.out

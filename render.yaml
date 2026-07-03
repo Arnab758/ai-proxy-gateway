@@ -1,0 +1,17 @@
+# One-click deploy on Render
+# https://render.com/deploy?repo=https://github.com/Arnab758/ai-gateway
+
+services:
+  - type: web
+    name: ai-gateway
+    env: docker
+    repo: https://github.com/Arnab758/ai-gateway
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: UPSTREAM_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false  # User must add Redis addon and set this
+    healthCheckPath: /health
