@@ -200,15 +200,19 @@ func handleTrialSignup(w http.ResponseWriter, r *http.Request) {
 	}
 	infoJSON, _ := json.Marshal(info)
 
-	// Create empty stats
-	stats := TrialStats{}
-	statsJSON, _ := json.Marshal(stats)
-
 	// Store in Redis with TTL
 	ttl := trialDuration(cfg)
 	pipe := rdb.Pipeline()
 	pipe.Set(rdbCtx, redisKeyTokenInfo(token), infoJSON, ttl)
-	pipe.Set(rdbCtx, redisKeyTokenStats(token), statsJSON, ttl)
+	// Initialize stats as Redis Hash (so HIncrBy/HGetAll work correctly)
+	pipe.HSet(rdbCtx, redisKeyTokenStats(token), map[string]interface{}{
+		"total_requests":   0,
+		"potential_hits":   0,
+		"potential_misses": 0,
+		"tokens_saved":     0,
+		"cost_saved_usd":   0.0,
+	})
+	pipe.Expire(rdbCtx, redisKeyTokenStats(token), ttl)
 	pipe.SAdd(rdbCtx, redisKeyIndex(), token)
 	pipe.Expire(rdbCtx, redisKeyIndex(), ttl)
 	_, err := pipe.Exec(rdbCtx)
