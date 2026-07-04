@@ -8,13 +8,14 @@ import (
 )
 
 type Config struct {
-	Gateway   GatewayConfig   `yaml:"gateway"`
-	Cache     CacheConfig     `yaml:"cache"`
-	Rate      RateConfig      `yaml:"rate_limiter"`
-	Upstream  UpstreamConfig  `yaml:"upstream"`
-	Dedup     DedupConfig     `yaml:"deduplication"`
-	Telemetry TelemetryConfig `yaml:"telemetry"`
-	Observer  ObserverConfig  `yaml:"observer"`
+	Gateway    GatewayConfig    `yaml:"gateway"`
+	Cache      CacheConfig      `yaml:"cache"`
+	Rate       RateConfig       `yaml:"rate_limiter"`
+	Upstream   UpstreamConfig   `yaml:"upstream"`
+	Dedup      DedupConfig      `yaml:"deduplication"`
+	LoopKiller LoopKillerConfig `yaml:"loop_killer"`
+	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+	Observer   ObserverConfig   `yaml:"observer"`
 }
 
 type GatewayConfig struct {
@@ -79,6 +80,18 @@ type DedupConfig struct {
 	Enabled        bool `yaml:"enabled"`
 	LockTTLSeconds int  `yaml:"lock_ttl_seconds"`
 	MaxWaitSeconds int  `yaml:"max_wait_seconds"`
+}
+
+type LoopKillerConfig struct {
+	Enabled           bool    `yaml:"enabled"`
+	WindowSeconds     int     `yaml:"window_seconds"`
+	MaxEntries        int     `yaml:"max_entries"`
+	BlockSeconds      int     `yaml:"block_seconds"`
+	CooldownSeconds   int     `yaml:"cooldown_seconds"`
+	FrequencyWeight   float64 `yaml:"frequency_weight"`
+	SimilarityWeight  float64 `yaml:"similarity_weight"`
+	Stage2DelayMS     int     `yaml:"stage2_delay_ms"`
+	Stage3LockoutMS   int     `yaml:"stage3_lockout_ms"`
 }
 
 type TelemetryConfig struct {
@@ -165,6 +178,17 @@ func DefaultConfig() *Config {
 			Enabled:        true,
 			LockTTLSeconds: 10,
 			MaxWaitSeconds: 30,
+		},
+		LoopKiller: LoopKillerConfig{
+			Enabled:           true,
+			WindowSeconds:     30,
+			MaxEntries:        100,
+			BlockSeconds:      60,
+			CooldownSeconds:   120,
+			FrequencyWeight:   1.0,
+			SimilarityWeight:  2.0,
+			Stage2DelayMS:     500,
+			Stage3LockoutMS:   30000,
 		},
 		Telemetry: TelemetryConfig{
 			Enabled:     true,

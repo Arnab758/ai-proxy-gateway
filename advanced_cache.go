@@ -344,59 +344,138 @@ func (h *HNSWIndex) Size() int {
 }
 
 // ============================================================================
-// L1 Hot Cache - O(1) exact and near-exact lookups
+// L1 Hot Cache - O(1) exact and near-exact lookups with LRU tracking
 // ============================================================================
 
+type l1Node struct {
+	hash     string
+	response []byte
+	prev     *l1Node
+	next     *l1Node
+}
+
 type L1HotCache struct {
-	exactMatches map[string][]byte        // Exact hash -> response
+	exactMatches map[string]*l1Node  // Exact hash -> linked list node
 	nearMatches  map[uint64][]l1NearEntry // Quantized vector hash -> responses
 	mu           sync.RWMutex
 	maxSize      int
+
+	// LRU linked list
+	head *l1Node
+	tail *l1Node
+	lruSize int
 }
 
 type l1NearEntry struct {
-	response []byte
-	score    float64
+	response      []byte
+	score         float64
+	promptHash    string // Reference back to exact entry for promotion on hit
 }
 
 func NewL1HotCache(maxSize int) *L1HotCache {
 	return &L1HotCache{
-		exactMatches: make(map[string][]byte),
+		exactMatches: make(map[string]*l1Node),
 		nearMatches:  make(map[uint64][]l1NearEntry),
 		maxSize:      maxSize,
 	}
 }
 
 func (c *L1HotCache) GetExact(hash string) ([]byte, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	val, ok := c.exactMatches[hash]
-	return val, ok
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	node, ok := c.exactMatches[hash]
+	if !ok {
+		return nil, false
+	}
+
+	// Promote to front (most recently used)
+	c.promote(node)
+
+	return node.response, true
 }
 
 func (c *L1HotCache) SetExact(hash string, response []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// LRU eviction if needed
-	if len(c.exactMatches) >= c.maxSize/2 {
-		c.evictExact()
+	// If already exists, just update
+	if node, ok := c.exactMatches[hash]; ok {
+		node.response = response
+		c.promote(node)
+		return
 	}
 
-	c.exactMatches[hash] = response
+	// Evict if full
+	for c.lruSize >= c.maxSize/2 {
+		c.evictOldest()
+	}
+
+	// Add to front
+	node := &l1Node{
+		hash:     hash,
+		response: response,
+	}
+	c.pushFront(node)
+	c.exactMatches[hash] = node
 }
 
-func (c *L1HotCache) evictExact() {
-	// Simple eviction: remove 10% of entries
-	count := 0
-	evictCount := c.maxSize / 10
-	for k := range c.exactMatches {
-		delete(c.exactMatches, k)
-		count++
-		if count >= evictCount {
-			break
-		}
+func (c *L1HotCache) promote(node *l1Node) {
+	if node == c.head {
+		return // already at front
 	}
+
+	// Remove from current position
+	if node.prev != nil {
+		node.prev.next = node.next
+	}
+	if node.next != nil {
+		node.next.prev = node.prev
+	}
+	if node == c.tail {
+		c.tail = node.prev
+	}
+
+	// Insert at front
+	node.prev = nil
+	node.next = c.head
+	if c.head != nil {
+		c.head.prev = node
+	}
+	c.head = node
+	if c.tail == nil {
+		c.tail = node
+	}
+}
+
+func (c *L1HotCache) pushFront(node *l1Node) {
+	node.prev = nil
+	node.next = c.head
+	if c.head != nil {
+		c.head.prev = node
+	}
+	c.head = node
+	if c.tail == nil {
+		c.tail = node
+	}
+	c.lruSize++
+}
+
+func (c *L1HotCache) evictOldest() {
+	if c.tail == nil {
+		return
+	}
+
+	oldest := c.tail
+	c.tail = oldest.prev
+	if c.tail != nil {
+		c.tail.next = nil
+	} else {
+		c.head = nil
+	}
+
+	delete(c.exactMatches, oldest.hash)
+	c.lruSize--
 }
 
 // Quantize vector to 8-bit integers for fast hashing
@@ -421,8 +500,8 @@ func (c *L1HotCache) quantizeVector(vec []float64) uint64 {
 }
 
 func (c *L1HotCache) GetNear(vec []float64, threshold float64) ([]byte, float64, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	hash := c.quantizeVector(vec)
 	entries, ok := c.nearMatches[hash]
@@ -433,10 +512,19 @@ func (c *L1HotCache) GetNear(vec []float64, threshold float64) ([]byte, float64,
 	// Find best match
 	bestScore := 0.0
 	var bestResponse []byte
+	var bestHash string
 	for _, entry := range entries {
 		if entry.score > bestScore && entry.score >= threshold {
 			bestScore = entry.score
 			bestResponse = entry.response
+			bestHash = entry.promptHash
+		}
+	}
+
+	// Promote the exact entry to front on near hit
+	if bestHash != "" {
+		if node, ok := c.exactMatches[bestHash]; ok {
+			c.promote(node)
 		}
 	}
 
@@ -452,38 +540,45 @@ func (c *L1HotCache) SetNear(vec []float64, response []byte, score float64) {
 
 	hash := c.quantizeVector(vec)
 
-	// Check if already exists
-	for _, entry := range c.nearMatches[hash] {
+	// Remove duplicate if exists
+	for i, entry := range c.nearMatches[hash] {
 		if string(entry.response) == string(response) {
-			return
+			c.nearMatches[hash] = append(c.nearMatches[hash][:i], c.nearMatches[hash][i+1:]...)
+			break
 		}
 	}
 
-	// LRU eviction if needed
+	// Find prompt hash for cross-reference
+	promptHash := ""
+	for k, node := range c.exactMatches {
+		if string(node.response) == string(response) {
+			promptHash = k
+			break
+		}
+	}
+
+	// Simple eviction if needed (map iteration is fine for near matches)
 	if len(c.nearMatches) >= c.maxSize/2 {
-		c.evictNear()
+		count := 0
+		evictCount := c.maxSize / 20
+		for k := range c.nearMatches {
+			delete(c.nearMatches, k)
+			count++
+			if count >= evictCount {
+				break
+			}
+		}
 	}
 
 	c.nearMatches[hash] = append(c.nearMatches[hash], l1NearEntry{
-		response: response,
-		score:    score,
+		response:   response,
+		score:      score,
+		promptHash: promptHash,
 	})
 
 	// Limit entries per hash
 	if len(c.nearMatches[hash]) > 10 {
 		c.nearMatches[hash] = c.nearMatches[hash][:10]
-	}
-}
-
-func (c *L1HotCache) evictNear() {
-	count := 0
-	evictCount := c.maxSize / 10
-	for k := range c.nearMatches {
-		delete(c.nearMatches, k)
-		count++
-		if count >= evictCount {
-			break
-		}
 	}
 }
 
@@ -524,11 +619,13 @@ type AdvancedSemanticCache struct {
 	embeddingCache   map[string][]float64
 	embeddingCacheMu sync.RWMutex
 
-	// Adaptive threshold state
+	// Adaptive threshold state (EMA-based for smoother adjustments)
 	adaptiveThreshold float64
-	hitHistory        []bool
-	hitHistoryMu      sync.Mutex
-	hitHistoryMax     int
+	emaHitRate        float64
+	hitCount          int64
+	missCount         int64
+	adjMu             sync.Mutex
+	lastAdjTime       time.Time
 }
 
 func NewAdvancedSemanticCache(redisURL string, cfg *Config) (*AdvancedSemanticCache, error) {
@@ -580,8 +677,8 @@ func NewAdvancedSemanticCache(redisURL string, cfg *Config) (*AdvancedSemanticCa
 		embeddingCache:    make(map[string][]float64),
 		dedupExpiry:       make(map[string]time.Time),
 		adaptiveThreshold: cfg.Cache.Vector.SimilarityThreshold,
-		hitHistory:        make([]bool, 0, 1000),
-		hitHistoryMax:     1000,
+		emaHitRate:        0.5,
+		lastAdjTime:       time.Now(),
 	}
 
 	go cache.cleanupDedupExpired()
@@ -592,7 +689,7 @@ func NewAdvancedSemanticCache(redisURL string, cfg *Config) (*AdvancedSemanticCa
 		storageType = "Redis+HNSW+L1"
 	}
 
-	log.Printf("🚀 Advanced Cache initialized: storage=%s, dim=%d, hnsw=%v, l1=%v",
+	log.Printf("Advanced Cache initialized: storage=%s, dim=%d, hnsw=%v, l1=%v",
 		storageType, cfg.Cache.Vector.Dimension, cfg.Cache.Vector.Enabled, cfg.Cache.Vector.Enabled)
 
 	return cache, nil
@@ -999,6 +1096,7 @@ func (ac *AdvancedSemanticCache) getResponseByNodeID(nodeID int) ([]byte, bool) 
 }
 
 // ============================================================================
+// ============================================================================
 // Early termination vector search
 // ============================================================================
 
@@ -1243,61 +1341,62 @@ func (ac *AdvancedSemanticCache) NotifyDedup(startupID, prompt string, response 
 // ============================================================================
 
 func (ac *AdvancedSemanticCache) recordHit() {
-	ac.hitHistoryMu.Lock()
-	ac.hitHistory = append(ac.hitHistory, true)
-	if len(ac.hitHistory) > ac.hitHistoryMax {
-		ac.hitHistory = ac.hitHistory[1:]
-	}
-	ac.hitHistoryMu.Unlock()
+	ac.adjMu.Lock()
+	ac.hitCount++
+	// EMA: new_rate = 0.05 * 1.0 + 0.95 * old_rate
+	ac.emaHitRate = 0.05*1.0 + 0.95*ac.emaHitRate
+	ac.adjMu.Unlock()
 }
 
 func (ac *AdvancedSemanticCache) recordMiss() {
-	ac.hitHistoryMu.Lock()
-	ac.hitHistory = append(ac.hitHistory, false)
-	if len(ac.hitHistory) > ac.hitHistoryMax {
-		ac.hitHistory = ac.hitHistory[1:]
-	}
-	ac.hitHistoryMu.Unlock()
+	ac.adjMu.Lock()
+	ac.missCount++
+	// EMA: new_rate = 0.05 * 0.0 + 0.95 * old_rate
+	ac.emaHitRate = 0.95 * ac.emaHitRate
+	ac.adjMu.Unlock()
 }
 
 func (ac *AdvancedSemanticCache) adaptiveThresholdTuner() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(120 * time.Second) // Check every 2 minutes
 	defer ticker.Stop()
 
 	for range ticker.C {
-		ac.hitHistoryMu.Lock()
-		if len(ac.hitHistory) < 100 {
-			ac.hitHistoryMu.Unlock()
+		ac.adjMu.Lock()
+
+		totalRequests := ac.hitCount + ac.missCount
+		if totalRequests < 50 {
+			ac.adjMu.Unlock()
 			continue
 		}
 
-		// Calculate hit rate
-		hits := 0
-		for _, h := range ac.hitHistory {
-			if h {
-				hits++
-			}
-		}
-		hitRate := float64(hits) / float64(len(ac.hitHistory))
+		// Use EMA hit rate for smoother adjustments
+		hitRate := ac.emaHitRate
 
-		// Adjust threshold based on hit rate
-		// If hit rate is low, lower threshold to be more permissive
-		// If hit rate is high, raise threshold to be more strict
+		// Adjust threshold based on EMA hit rate
 		oldThreshold := ac.adaptiveThreshold
-		if hitRate < 0.3 {
-			ac.adaptiveThreshold = math.Max(0.7, ac.adaptiveThreshold-0.02)
-		} else if hitRate > 0.7 {
-			ac.adaptiveThreshold = math.Min(0.98, ac.adaptiveThreshold+0.01)
+		if hitRate < 0.25 {
+			// Too many misses - lower threshold gradually
+			ac.adaptiveThreshold = math.Max(0.65, ac.adaptiveThreshold-0.015)
+		} else if hitRate < 0.35 {
+			// Slightly low - gentle decrease
+			ac.adaptiveThreshold = math.Max(0.7, ac.adaptiveThreshold-0.005)
+		} else if hitRate > 0.75 {
+			// Too many hits - raise threshold to avoid false positives
+			ac.adaptiveThreshold = math.Min(0.97, ac.adaptiveThreshold+0.01)
+		} else if hitRate > 0.65 {
+			// Slightly high - gentle increase
+			ac.adaptiveThreshold = math.Min(0.95, ac.adaptiveThreshold+0.005)
 		}
 
 		if oldThreshold != ac.adaptiveThreshold {
-			log.Printf("🎯 Adaptive threshold: %.2f -> %.2f (hit rate: %.0f%%)",
+			log.Printf("Adaptive threshold: %.2f -> %.2f (EMA hit rate: %.1f%%)",
 				oldThreshold, ac.adaptiveThreshold, hitRate*100)
 		}
 
-		// Reset history
-		ac.hitHistory = make([]bool, 0, ac.hitHistoryMax)
-		ac.hitHistoryMu.Unlock()
+		// Decay counters to keep EMA responsive
+		ac.hitCount = 0
+		ac.missCount = 0
+		ac.adjMu.Unlock()
 	}
 }
 
@@ -1339,18 +1438,9 @@ func (ac *AdvancedSemanticCache) GetStats() map[string]interface{} {
 	}
 	ac.localIndexMu.RUnlock()
 
-	ac.hitHistoryMu.Lock()
-	hits := 0
-	for _, h := range ac.hitHistory {
-		if h {
-			hits++
-		}
-	}
-	recentHitRate := 0.0
-	if len(ac.hitHistory) > 0 {
-		recentHitRate = float64(hits) / float64(len(ac.hitHistory))
-	}
-	ac.hitHistoryMu.Unlock()
+	ac.adjMu.Lock()
+	recentHitRate := ac.emaHitRate
+	ac.adjMu.Unlock()
 
 	return map[string]interface{}{
 		"local_index_entries": totalEntries,

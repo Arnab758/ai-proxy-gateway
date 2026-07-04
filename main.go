@@ -19,6 +19,7 @@ import (
 
 var cfg *Config
 var cache *AdvancedSemanticCache
+var loopKiller *LoopKiller
 
 func main() {
 	log.Println("🚀 Starting AI Gateway... v1.0.3")
@@ -70,6 +71,11 @@ func main() {
 
 	// Initialize observer mode if enabled (Trial/observer mode)
 	InitObserverMode(cfg)
+
+	// Initialize loop killer (agentic loop detection)
+	loopKiller = NewLoopKiller(cfg.LoopKiller)
+	log.Printf("🛡️ Loop killer initialized: window=%ds, block=%ds, enabled=%v",
+		cfg.LoopKiller.WindowSeconds, cfg.LoopKiller.BlockSeconds, cfg.LoopKiller.Enabled)
 
 	// CORS middleware
 	corsMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
@@ -225,6 +231,39 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 
 	// Sanitize prompt (remove dangerous characters, limit length)
 	userPrompt = sanitizePrompt(userPrompt)
+
+	// Agentic loop killer: detect and mitigate runaway agent loops.
+	// Checks for rapid-fire identical/similar prompts from the same tenant.
+	// Evaluated AFTER prompt extraction but BEFORE cache lookup so we can
+	// throttle/block loops before they hit the cache or upstream.
+	if loopKiller != nil && cfg.LoopKiller.Enabled {
+		action := loopKiller.Evaluate(startupID, userPrompt)
+
+		if action.Stage >= LoopStageMonitor {
+			w.Header().Set("X-Gateway-Loop-Stage", action.Stage.String())
+			w.Header().Set("X-Gateway-Loop-Score", fmt.Sprintf("%.1f", action.Score))
+			w.Header().Set("X-Gateway-Loop-Message", action.Message)
+		}
+
+		if action.Blocked {
+			log.Printf("LOOP BLOCKED: tenant=%s, score=%.1f, requests=%d", startupID, action.Score, action.RequestCount)
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", "60")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":              "agent loop detected: too many identical requests",
+				"detail":             action.Message,
+				"retry_after_seconds": 60,
+				"loop_score":         action.Score,
+			})
+			return
+		}
+
+		if action.Delay > 0 {
+			log.Printf("LOOP THROTTLE: tenant=%s, delay=%v, score=%.1f", startupID, action.Delay, action.Score)
+			time.Sleep(action.Delay)
+		}
+	}
 
 	// Extract conversation context (last 3 messages) for context-aware caching
 	conversationContext := extractConversationContext(bodyBytes)

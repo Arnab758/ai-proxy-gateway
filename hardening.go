@@ -129,12 +129,18 @@ func recoverHandler(next http.HandlerFunc) http.HandlerFunc {
 
 // healthCheckDetailed checks all dependencies
 func healthCheckDetailed(w http.ResponseWriter, r *http.Request) {
+	loopStatus := "disabled"
+	if loopKiller != nil {
+		loopStatus = "active"
+	}
+
 	checks := map[string]interface{}{
 		"status": "ok",
 		"checks": map[string]interface{}{
-			"cache":     checkCache(),
-			"providers": checkProviders(),
-			"analytics": analytics != nil,
+			"cache":       checkCache(),
+			"providers":   checkProviders(),
+			"analytics":   analytics != nil,
+			"loop_killer": loopStatus,
 		},
 	}
 

@@ -44,6 +44,17 @@ deduplication:
   lock_ttl_seconds: 10
   max_wait_seconds: 30
 
+loop_killer:
+  enabled: true
+  window_seconds: 30        # Sliding window for tracking
+  max_entries: 100          # Max entries per tenant
+  block_seconds: 60         # How long to block detected loops
+  cooldown_seconds: 120    # Auto-cleanup after inactivity
+  frequency_weight: 1.0    # Weight for request frequency
+  similarity_weight: 2.0   # Weight for prompt similarity
+  stage2_delay_ms: 500     # Delay added during throttle stage
+  stage3_lockout_ms: 30000 # Max delay cap for stage 3
+
 telemetry:
   enabled: true
   metrics_port: 9090
