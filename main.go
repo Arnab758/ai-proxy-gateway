@@ -658,8 +658,8 @@ code{display:block;background:#252525;padding:12px;border-radius:8px;color:#4ade
 <div class="container">
 <h1>🔥 AI Gateway</h1>
 <p>Semantic caching layer for LLM APIs.<br>Cuts costs by 40-70% with zero code changes.</p>
-<a class="btn" href="https://github.com/Arnab758/ai-gateway" target="_blank">View on GitHub</a>
-<code>docker run -e UPSTREAM_API_KEY=sk-xxx -p 8080:8080 arnab758/ai-gateway</code>
+<a class="btn" href="https://github.com/Arnab758/ai-real" target="_blank">View on GitHub</a>
+<code>docker run -e UPSTREAM_API_KEY=sk-xxx -p 8080:8080 arnab758/ai-real</code>
 <p style="font-size:14px;color:#666">Open the full demo.html file in your browser for the interactive demo.</p>
 </div></body></html>`))
 

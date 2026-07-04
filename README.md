@@ -18,7 +18,7 @@ You're building an AI app and your API bill is $500/month. 40-70% of that is for
 
 **How was your deployment experience?**
 
-[![Give Feedback](https://img.shields.io/badge/📝_Share_Feedback-Here-green?style=for-the-badge)](https://github.com/Arnab758/ai-gateway/discussions)
+[![Give Feedback](https://img.shields.io/badge/📝_Share_Feedback-Here-green?style=for-the-badge)](https://github.com/Arnab758/ai-real/discussions)
 
 *Takes 30 seconds. Helps us improve AI Gateway for everyone.*
 
@@ -36,7 +36,7 @@ You're building an AI app and your API bill is $500/month. 40-70% of that is for
 
 ### Option 1: Railway (Recommended - Includes Redis)
 
-[![Deploy to Railway](https://railway.app/button.svg)](https://railway.app/direct?template=https://github.com/Arnab758/ai-gateway&envs=UPSTREAM_API_KEY&UPSTREAM_API_KEY=your_groq_or_openai_api_key)
+[![Deploy to Railway](https://railway.app/button.svg)](https://railway.app/direct?template=https://github.com/Arnab758/ai-real&envs=UPSTREAM_API_KEY&UPSTREAM_API_KEY=your_groq_or_openai_api_key)
 
 **Steps:**
 1. Click the button above
@@ -54,7 +54,7 @@ You're building an AI app and your API bill is $500/month. 40-70% of that is for
 
 ### Option 2: Render (One-Click Deploy)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Arnab758/ai-gateway)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Arnab758/ai-real)
 
 **Steps:**
 1. Click the button
@@ -76,7 +76,7 @@ You're building an AI app and your API bill is $500/month. 40-70% of that is for
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Arnab758/ai-gateway.git
+git clone https://github.com/Arnab758/ai-real.git
 cd ai-gateway
 
 # 2. Set your API key
@@ -486,8 +486,8 @@ MIT License - feel free to use this commercially!
 
 ## 🙋 Support
 
-- **Issues:** [GitHub Issues](https://github.com/Arnab758/ai-gateway/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Arnab758/ai-gateway/discussions)
+- **Issues:** [GitHub Issues](https://github.com/Arnab758/ai-real/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Arnab758/ai-real/discussions)
 - **Demo:** [Live Demo](https://ai-gateway-production-c86a.up.railway.app/demo)
 
 ## ⭐ Star History

@@ -1,11 +1,11 @@
 # One-click deploy on Render
-# https://render.com/deploy?repo=https://github.com/Arnab758/ai-gateway
+# https://render.com/deploy?repo=https://github.com/Arnab758/ai-real
 
 services:
   - type: web
     name: ai-gateway
     env: docker
-    repo: https://github.com/Arnab758/ai-gateway
+    repo: https://github.com/Arnab758/ai-real
     plan: free
     envVars:
       - key: PORT
