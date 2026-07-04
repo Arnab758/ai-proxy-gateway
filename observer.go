@@ -852,10 +852,10 @@ body { font-family:'Inter',system-ui,sans-serif; background:#000; color:#a1a1aa;
     <div class="stat-card">
       <div class="stat-label">Hit Rate</div>
       <div class="stat-value positive" id="hit-rate">0%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Projected Savings</div>
+    </div>      <div class="stat-card">
+      <div class="stat-label">Monthly Projection</div>
       <div class="stat-value positive" id="cost-saved">$0.00</div>
+      <div class="stat-sub">Based on your traffic patterns</div>
     </div>
   </div>
 
@@ -941,7 +941,7 @@ async function loadReport() {
     document.getElementById('total-requests').textContent = d.total_requests;
     document.getElementById('potential-hits').textContent = d.potential_hits;
     document.getElementById('hit-rate').textContent = d.hit_rate_percent.toFixed(1)+'%';
-    document.getElementById('cost-saved').textContent = '$'+d.cost_saved_usd.toFixed(2);
+    document.getElementById('cost-saved').textContent = '$'+d.projected_monthly.toFixed(2);
     document.getElementById('monthly').textContent = '$'+d.projected_monthly.toFixed(2);
     document.getElementById('yearly').textContent = '$'+d.projected_yearly.toFixed(2);
     document.getElementById('tokens').textContent = d.tokens_saved.toLocaleString();
