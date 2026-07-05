@@ -19,6 +19,7 @@ COPY --from=builder /app/gateway.yaml .
 COPY --from=builder /app/demo.html .
 COPY --from=builder /app/dashboard.html .
 COPY --from=builder /app/index.html .
+COPY --from=builder /app/benchmark.html .
 
 EXPOSE 8080
 EXPOSE 9090

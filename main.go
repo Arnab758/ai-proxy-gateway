@@ -123,6 +123,8 @@ func main() {
 	http.HandleFunc("/metrics", handleMetrics)
 	http.HandleFunc("/stats", handleStats)
 	http.HandleFunc("/demo", handleDemo)
+	http.HandleFunc("/benchmark", handleBenchmark)
+	http.HandleFunc("/api/benchmark-chat", corsMiddleware(handleBenchmarkChat))
 	http.HandleFunc("/api/landing-stats", handleLandingStats)
 	http.HandleFunc("/api/deployed", func(w http.ResponseWriter, r *http.Request) {
 		tenant := r.Header.Get("X-Gateway-Token")
@@ -664,6 +666,183 @@ func extractConversationContext(bodyBytes []byte) []string {
 	}
 
 	return context
+}
+
+func handleBenchmark(w http.ResponseWriter, r *http.Request) {
+	// Try to serve benchmark.html from the current directory
+	paths := []string{"benchmark.html", "benchmark/benchmark.html"}
+
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			f, err := os.Open(p)
+			if err == nil {
+				defer f.Close()
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				io.Copy(w, f)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(`{"error": "Benchmark page not found. Ensure benchmark.html exists."}`))
+}
+
+func handleBenchmarkChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	if req.Message == "" {
+		writeError(w, http.StatusBadRequest, "Message is required")
+		return
+	}
+
+	// Check if we have a configured upstream key
+	upstreamKey := os.Getenv("UPSTREAM_API_KEY")
+	if upstreamKey == "" {
+		// Return a simulated response showing the gateway is ready
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"response": "Gateway is running and ready to cache. Configure your UPSTREAM_API_KEY to send live requests. Meanwhile, check the /dashboard for live analytics.",
+			"cache":    "OBSERVER",
+			"score":    0.0,
+		})
+		return
+	}
+
+	// Track for analytics
+	startTime := time.Now()
+
+	// Check cache first
+	var cachedResponse []byte
+	var similarityScore float64
+	var cacheHit bool
+	if cache != nil {
+		cachedResponse, similarityScore, cacheHit = cache.Search("benchmark", req.Message, cfg.Cache.Vector.SimilarityThreshold)
+	}
+
+	if cacheHit && similarityScore >= cfg.Cache.Vector.SimilarityThreshold {
+		tokensSaved := len(cachedResponse) / 4
+		costSaved := float64(tokensSaved) / 1000.0 * 0.03
+
+		if analytics != nil {
+			analytics.RecordRequest("HIT", tokensSaved, costSaved, "benchmark")
+		}
+
+		w.Header().Set("X-Gateway-Cache", "HIT")
+		w.Header().Set("X-Gateway-Confidence", fmt.Sprintf("%.4f", similarityScore))
+		w.Header().Set("Content-Type", "application/json")
+
+		// Try to parse cached response
+		var cachedObj map[string]interface{}
+		if err := json.Unmarshal(cachedResponse, &cachedObj); err == nil {
+			cachedObj["cache"] = "HIT"
+			cachedObj["score"] = similarityScore
+			json.NewEncoder(w).Encode(cachedObj)
+		} else {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"response": "[Cached response]",
+				"cache":    "HIT",
+				"score":    similarityScore,
+			})
+		}
+		return
+	}
+
+	// Forward to upstream
+	payload := map[string]interface{}{
+		"model": "mixtral-8x7b-32768",
+		"messages": []map[string]string{
+			{"role": "user", "content": req.Message},
+		},
+		"max_tokens": 150,
+	}
+
+	bodyBytes, _ := json.Marshal(payload)
+	responseBytes := buildProxyResponse(bodyBytes, "")
+
+	// Check if response has error
+	var responseObj map[string]interface{}
+	hasError := false
+	errMsg := ""
+	if err := json.Unmarshal(responseBytes, &responseObj); err == nil {
+		if msg, ok := responseObj["error"].(string); ok && msg != "" {
+			hasError = true
+			errMsg = msg
+		}
+	}
+
+	// Cache the response on successful upstream call
+	if !hasError && cache != nil {
+		cache.Store("benchmark", req.Message, responseBytes)
+	}
+
+	if analytics != nil {
+		latency := time.Since(startTime).Milliseconds()
+		analytics.RecordRequest("MISS", 0, 0, "benchmark")
+		analytics.RecordRequestLog(RequestLog{
+			Timestamp:   time.Now(),
+			TenantID:    "benchmark",
+			CacheStatus: "MISS",
+			MatchType:   "none",
+			Confidence:  0.0,
+			LatencyMS:   latency,
+			Provider:    cfg.Upstream.Primary.Provider,
+			CostSaved:   0.0,
+			TokensSaved: 0,
+		})
+	}
+
+	w.Header().Set("X-Gateway-Cache", "MISS")
+	w.Header().Set("Content-Type", "application/json")
+
+	if hasError {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"response": "(Upstream error: " + errMsg + ")",
+			"cache":    "MISS",
+			"score":    0.0,
+		})
+		return
+	}
+
+	// Return the actual upstream response (extract content for simpler display)
+	var chatContent string
+	if choices, ok := responseObj["choices"].([]interface{}); ok && len(choices) > 0 {
+		if first, ok := choices[0].(map[string]interface{}); ok {
+			if msg, ok := first["message"].(map[string]interface{}); ok {
+				if c, ok := msg["content"].(string); ok {
+					chatContent = c
+				}
+			}
+		}
+	}
+
+	if chatContent == "" {
+		// Fallback: return the whole response as JSON
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"response": responseBytes,
+			"cache":    "MISS",
+			"score":    0.0,
+			"raw":      true,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"response": chatContent,
+		"cache":    "MISS",
+		"score":    0.0,
+	})
 }
 
 func handleDemo(w http.ResponseWriter, r *http.Request) {

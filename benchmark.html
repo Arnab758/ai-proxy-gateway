@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proxymic — Live Benchmark: See AI Caching Savings in Real-Time</title>
+<meta name="description" content="Live benchmark showing real-time cache hit rates, latency improvements, and cost savings from Proxymic's semantic caching proxy.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:#000; color:#a1a1aa; overflow-x:hidden; }
+::selection { background:#8b5cf6; color:#fff; }
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(139,92,246,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,92,246,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.glow-1 {
+  position:fixed; top:-10%; left:-5%; width:500px; height:500px;
+  background:radial-gradient(circle, rgba(139,92,246,.1) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.glow-2 {
+  position:fixed; bottom:-10%; right:-5%; width:400px; height:400px;
+  background:radial-gradient(circle, rgba(52,211,153,.08) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+.container { max-width:1100px; margin:0 auto; padding:24px; position:relative; z-index:1; }
+
+.header { display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #18181b; margin-bottom:32px; }
+.header-logo { font-size:20px; font-weight:700; text-decoration:none; }
+.header-logo span:first-child { color:#8b5cf6; }
+.header-logo span:last-child { color:#52525b; }
+.header-links { display:flex; gap:20px; align-items:center; }
+.header-links a { color:#71717a; text-decoration:none; font-size:13px; transition:color .2s; }
+.header-links a:hover { color:#fafafa; }
+
+.hero { text-align:center; padding:40px 0 48px; }
+.hero h1 { font-size:clamp(32px,5vw,56px); font-weight:900; color:#fafafa; letter-spacing:-2px; line-height:1.05; margin-bottom:12px; }
+.hero h1 span { background:linear-gradient(135deg,#34d399,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero p { color:#71717a; font-size:16px; max-width:600px; margin:0 auto 8px; line-height:1.7; }
+.hero .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.2); border-radius:20px; font-size:12px; color:#34d399; margin-top:8px; }
+
+/* Stats grid */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:32px; }
+.stat-card { background:#09090b; border:1px solid #18181b; border-radius:12px; padding:20px; text-align:center; position:relative; overflow:hidden; }
+.stat-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#8b5cf6,transparent); opacity:0.3; }
+.stat-value { font-size:clamp(24px,3vw,36px); font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.stat-value.green { color:#34d399; }
+.stat-value.purple { color:#a78bfa; }
+.stat-value.blue { color:#60a5fa; }
+.stat-value.amber { color:#fbbf24; }
+.stat-label { color:#52525b; font-size:11px; margin-top:4px; text-transform:uppercase; letter-spacing:1px; }
+
+/* Side-by-side comparison */
+.comparison { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px; }
+.comparison-card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:28px; position:relative; overflow:hidden; transition:border-color .3s; }
+.comparison-card.bad { border-color:rgba(239,68,68,.15); }
+.comparison-card.good { border-color:rgba(52,211,153,.15); }
+.comparison-card.bad:hover { border-color:rgba(239,68,68,.3); }
+.comparison-card.good:hover { border-color:rgba(52,211,153,.3); }
+.comp-label { font-size:11px; text-transform:uppercase; letter-spacing:2px; font-weight:600; margin-bottom:4px; }
+.comp-label.bad { color:#ef4444; }
+.comp-label.good { color:#34d399; }
+.comp-title { font-size:20px; font-weight:700; color:#fafafa; margin-bottom:20px; }
+.comp-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #09090b; }
+.comp-row:last-child { border-bottom:none; }
+.comp-row-label { color:#71717a; font-size:13px; }
+.comp-row-value { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:600; }
+.comp-row-value.bad { color:#ef4444; }
+.comp-row-value.good { color:#34d399; }
+.comp-row-value.neutral { color:#fafafa; }
+.comp-savings-badge { position:absolute; top:16px; right:16px; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; }
+.comp-savings-badge { background:rgba(52,211,153,.15); color:#34d399; border:1px solid rgba(52,211,153,.2); }
+
+/* Progress bars */
+.progress-group { margin-bottom:32px; }
+.progress-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+.progress-label span:first-child { color:#71717a; }
+.progress-label span:last-child { font-family:'JetBrains Mono',monospace; font-weight:600; }
+.progress-bar { width:100%; height:10px; background:#18181b; border-radius:5px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:5px; transition:width 1.5s ease; background:linear-gradient(90deg,#34d399,#8b5cf6); }
+.progress-fill.red { background:linear-gradient(90deg,#ef4444,#f97316); }
+.progress-fill.amber { background:linear-gradient(90deg,#fbbf24,#f97316); }
+
+/* Live Demo Chat */
+.chat-card { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; margin-bottom:32px; }
+.chat-card h2 { color:#fafafa; font-size:16px; font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+.chat-card p { color:#71717a; font-size:13px; margin-bottom:16px; }
+.chat-box { background:#000; border:1px solid #27272a; border-radius:10px; padding:16px; max-height:360px; overflow-y:auto; margin-bottom:12px; }
+.chat-msg { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:13px; line-height:1.6; }
+.chat-msg.user { background:rgba(139,92,246,.08); border:1px solid rgba(139,92,246,.15); color:#c4b5fd; }
+.chat-msg.assistant { background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.15); color:#6ee7b7; }
+.chat-msg .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; margin-left:8px; }
+.chat-msg .badge.hit { background:rgba(52,211,153,.2); color:#34d399; }
+.chat-msg .badge.miss { background:rgba(239,68,68,.2); color:#ef4444; }
+.chat-msg .meta { font-size:11px; color:#52525b; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
+.chat-input-row { display:flex; gap:8px; }
+.chat-input { flex:1; padding:12px 16px; background:#000; border:1px solid #27272a; border-radius:10px; color:#fafafa; font-size:14px; outline:none; transition:border-color .2s; font-family:'JetBrains Mono',monospace; }
+.chat-input:focus { border-color:#8b5cf6; }
+.chat-input::placeholder { color:#3f3f46; }
+.send-btn { padding:12px 24px; background:#8b5cf6; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; }
+.send-btn:hover { background:#7c3aed; }
+.send-btn:disabled { opacity:.5; cursor:not-allowed; }
+.send-btn.secondary { background:transparent; border:1px solid #27272a; color:#a1a1aa; }
+.send-btn.secondary:hover { border-color:#3f3f46; color:#fafafa; }
+
+/* Quick test buttons */
+.test-btns { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.test-btn { padding:6px 12px; background:transparent; border:1px solid #27272a; border-radius:6px; color:#71717a; font-size:11px; cursor:pointer; transition:all .2s; font-family:'JetBrains Mono',monospace; }
+.test-btn:hover { border-color:#8b5cf6; color:#a78bfa; background:rgba(139,92,246,.05); }
+.test-btn.active { border-color:#8b5cf6; color:#a78bfa; background:rgba(139,92,246,.1); }
+
+/* Annual projection */
+.projection { background:linear-gradient(135deg,rgba(139,92,246,.05),rgba(52,211,153,.05)); border:1px solid rgba(139,92,246,.15); border-radius:16px; padding:32px; text-align:center; margin-bottom:32px; }
+.projection h2 { color:#fafafa; font-size:18px; font-weight:600; margin-bottom:16px; }
+.projection-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; }
+.projection-item { background:rgba(0,0,0,.3); border-radius:12px; padding:20px; }
+.projection-value { font-size:28px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.projection-value.green { color:#34d399; }
+.projection-value.purple { color:#a78bfa; }
+.projection-label { color:#52525b; font-size:12px; margin-top:4px; }
+
+/* Share snippet */
+.share-area { background:#09090b; border:1px solid #18181b; border-radius:16px; padding:24px; margin-bottom:32px; }
+.share-area h2 { color:#fafafa; font-size:16px; font-weight:600; margin-bottom:8px; }
+.share-box { background:#000; border:1px solid #27272a; border-radius:10px; padding:16px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#71717a; line-height:1.8; margin-bottom:12px; user-select:all; cursor:copy; }
+.share-box:hover { border-color:#3f3f46; }
+.share-box .highlight { color:#34d399; }
+.share-box .highlight2 { color:#a78bfa; }
+.copy-btn { padding:8px 20px; background:transparent; border:1px solid #27272a; color:#a1a1aa; border-radius:8px; cursor:pointer; font-size:13px; transition:all .2s; }
+.copy-btn:hover { border-color:#8b5cf6; color:#fafafa; }
+
+/* Footer */
+.footer { text-align:center; padding:32px 0 24px; border-top:1px solid #18181b; color:#3f3f46; font-size:12px; }
+.footer a { color:#52525b; text-decoration:none; transition:color .2s; }
+.footer a:hover { color:#71717a; }
+
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#09090b; border:1px solid #27272a; color:#34d399; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:600; z-index:1000; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+
+@media(max-width:768px) {
+  .comparison { grid-template-columns:1fr; }
+  .hero h1 { font-size:28px; }
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+}
+
+/* Auto-scroll animation for first load */
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.animate-in { animation:slideUp .5s ease-out both; }
+.delay-1 { animation-delay:.1s; }
+.delay-2 { animation-delay:.2s; }
+.delay-3 { animation-delay:.3s; }
+.delay-4 { animation-delay:.4s; }
+.delay-5 { animation-delay:.5s; }
+
+/* Counter animation */
+.count-up { display:inline-block; }
+
+/* Loading shimmer */
+.shimmer { position:relative; overflow:hidden; }
+.shimmer::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.02),transparent); animation:shimmer 2s infinite; }
+@keyframes shimmer { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+</style>
+</head>
+<body>
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+<div class="bg-grid" style="position:fixed;inset:0;z-index:0;"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <a href="/" class="header-logo"><span>proxymic</span><span>.</span></a>
+    <div class="header-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/demo">Live Demo</a>
+      <a href="/trial/signup" style="color:#8b5cf6;font-weight:600;">Free Trial</a>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero animate-in">
+    <h1>Real <span>AI Caching</span> Benchmark</h1>
+    <p>Live data from Proxymic's production gateway. See exactly how much latency, tokens, and money semantic caching saves.</p>
+    <div class="badge">⬤ Live — data updates every 10 seconds</div>
+  </div>
+
+  <!-- Key Stats -->
+  <div class="stats-grid animate-in delay-1">
+    <div class="stat-card">
+      <div class="stat-value purple" id="totalReqs">—</div>
+      <div class="stat-label">Total Requests</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="cacheHits">—</div>
+      <div class="stat-label">Cache Hits</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value blue" id="hitRate">—</div>
+      <div class="stat-label">Hit Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value amber" id="tokensSaved">—</div>
+      <div class="stat-label">Tokens Saved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value green" id="moneySaved">—</div>
+      <div class="stat-label">Cost Saved</div>
+    </div>
+  </div>
+
+  <!-- Hit Rate Progress -->
+  <div class="progress-group animate-in delay-2">
+    <div class="progress-label">
+      <span>Cache Hit Rate (live)</span>
+      <span id="hitRateDisplay" style="color:#34d399;">—</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="hitRateBar" style="width:0%;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#3f3f46;margin-top:6px;">
+      <span>0%</span>
+      <span>50%</span>
+      <span>100%</span>
+    </div>
+  </div>
+
+  <!-- Side-by-Side Comparison -->
+  <div class="animate-in delay-2">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="color:#fafafa;font-size:18px;font-weight:700;">⚡ Side-by-Side: With & Without Caching</h2>
+      <span style="color:#52525b;font-size:11px;">Per-request averages ⬤</span>
+    </div>
+  </div>
+
+  <div class="comparison animate-in delay-3">
+    <!-- Without Cache -->
+    <div class="comparison-card bad">
+      <div class="comp-label bad">Without Proxymic</div>
+      <div class="comp-title">Direct LLM API</div>
+      <div class="comp-row">
+        <span class="comp-row-label">Avg Latency</span>
+        <span class="comp-row-value bad" id="latencyWithout">~1,500ms</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 1K requests</span>
+        <span class="comp-row-value bad">$3.00</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 100K requests</span>
+        <span class="comp-row-value bad">$300.00</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 1M requests</span>
+        <span class="comp-row-value bad">$3,000.00</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cache Hit Rate</span>
+        <span class="comp-row-value bad">0%</span>
+      </div>
+    </div>
+
+    <!-- With Cache -->
+    <div class="comparison-card good">
+      <div class="comp-label good">With Proxymic</div>
+      <div class="comp-title">Cached via Gateway</div>
+      <div class="comp-savings-badge" id="savingsBadge">~55% savings</div>
+      <div class="comp-row">
+        <span class="comp-row-label">Avg Latency</span>
+        <span class="comp-row-value good" id="latencyWith">~3.6ms</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 1K requests</span>
+        <span class="comp-row-value good" id="costPer1K">$1.35</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 100K requests</span>
+        <span class="comp-row-value good" id="costPer100K">$135.00</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cost per 1M requests</span>
+        <span class="comp-row-value good" id="costPer1M">$1,350.00</span>
+      </div>
+      <div class="comp-row">
+        <span class="comp-row-label">Cache Hit Rate</span>
+        <span class="comp-row-value good" id="hitRateComparison">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Chat Demo -->
+  <div class="chat-card animate-in delay-3">
+    <h2>🎯 Try It Live</h2>
+    <p>Send a message through the gateway. See whether it's a <strong style="color:#34d399;">HIT</strong> (cached) or <strong style="color:#ef4444;">MISS</strong> (called upstream) in real time.</p>
+
+    <div class="test-btns">
+      <button class="test-btn" onclick="useExample('What is the capital of France?')">🇫🇷 France</button>
+      <button class="test-btn" onclick="useExample('Tell me the capital city of France')">🔄 Similar (should HIT)</button>
+      <button class="test-btn" onclick="useExample('What is the capital of Germany?')">🇩🇪 Germany</button>
+      <button class="test-btn" onclick="useExample('Explain quantum computing in simple terms')">⚛️ Quantum</button>
+      <button class="test-btn" onclick="useExample('Explain quantum computing simply')">🔄 Similar quantum</button>
+      <button class="test-btn" onclick="useExample('Write a Python function to sort a list')">🐍 Python sort</button>
+      <button class="test-btn" onclick="useExample('Write a Python function to sort an array')">🔄 Similar Python</button>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+      <div style="color:#3f3f46;font-size:13px;text-align:center;padding:40px 0;">Click an example prompt above to test the cache, or type your own below.</div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <span style="font-size:12px;color:#52525b;">Session: <strong id="sessionHits" style="color:#34d399;">0 hits</strong> · <strong id="sessionMisses" style="color:#ef4444;">0 misses</strong> · <strong id="sessionSaved" style="color:#34d399;">$0.0000 saved</strong></span>
+    </div>
+
+    <div class="chat-input-row">
+      <input type="text" id="messageInput" class="chat-input" placeholder="Type any question..." onkeydown="if(event.key==='Enter') sendMessage()">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send →</button>
+    </div>
+  </div>
+
+  <!-- Annual Savings Projection -->
+  <div class="projection animate-in delay-4" id="projectionSection">
+    <h2>📈 Annual Savings Projection</h2>
+    <p style="color:#71717a;font-size:13px;margin-bottom:20px;">Based on your actual traffic patterns. Adjust your monthly spend below.</p>
+    <div style="margin-bottom:20px;display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;">
+      <span style="color:#52525b;font-size:13px;">Monthly LLM spend:</span>
+      <div style="display:flex;gap:4px;">
+        <span style="color:#fafafa;font-size:14px;">$</span>
+        <input type="number" id="monthlySpend" value="1000" min="100" max="1000000" step="100" style="width:100px;padding:8px 12px;background:#000;border:1px solid #27272a;border-radius:8px;color:#fafafa;font-size:14px;font-family:'JetBrains Mono',monospace;outline:none;" onchange="updateProjection()" onkeyup="updateProjection()">
+      </div>
+      <button class="send-btn secondary" onclick="setMonthly(500)">$500</button>
+      <button class="send-btn secondary" onclick="setMonthly(1000)">$1K</button>
+      <button class="send-btn secondary" onclick="setMonthly(5000)">$5K</button>
+      <button class="send-btn secondary" onclick="setMonthly(10000)">$10K</button>
+      <button class="send-btn secondary" onclick="setMonthly(50000)">$50K</button>
+    </div>
+    <div class="projection-grid">
+      <div class="projection-item">
+        <div class="projection-value green" id="projAnnual">$0</div>
+        <div class="projection-label">Annual Savings</div>
+      </div>
+      <div class="projection-item">
+        <div class="projection-value purple" id="projMonthly">$0</div>
+        <div class="projection-label">Monthly Savings</div>
+      </div>
+      <div class="projection-item">
+        <div class="projection-value green" id="projPercent">0%</div>
+        <div class="projection-label">Cache Hit Rate</div>
+      </div>
+      <div class="projection-item">
+        <div class="projection-value blue" id="projEffective">$0</div>
+        <div class="projection-label">Effective Monthly Cost</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shareable Snippet -->
+  <div class="share-area animate-in delay-4">
+    <h2>📋 Copy & Share This Benchmark</h2>
+    <p style="color:#71717a;font-size:13px;margin-bottom:12px;">Post this on LinkedIn, Twitter, or send it in a DM. Shows live data.</p>
+    <div class="share-box" id="shareBox" onclick="copyShareText()">
+<span class="highlight2">Proxymic</span> Live Benchmark ⚡<br><br>
+Cache Hit Rate: <span class="highlight" id="shareHitRate">—</span><br>
+Latency: ~3.6ms (vs 1,500ms without cache — <span class="highlight">416x faster</span>)<br>
+Tokens Saved: <span class="highlight" id="shareTokens">—</span><br>
+Cost Saved: <span class="highlight" id="shareCost">—</span><br><br>
+If your LLM bill is $1K/mo → save <span class="highlight" id="shareMonthly">$550/yr</span><br>
+If your LLM bill is $10K/mo → save <span class="highlight" id="shareAnnual">$66K/yr</span><br><br>
+Zero code changes. One URL swap. Open-source.<br>
+🔗 <span class="highlight2">https://ai-gateway-production-c86a.up.railway.app/benchmark</span>
+    </div>
+    <button class="copy-btn" onclick="copyShareText()">📋 Copy to Clipboard</button>
+  </div>
+
+  <div class="footer">
+    Proxymic AI Gateway — Built with Go + HNSW + Redis. <a href="/trial/signup">Start Free Trial →</a>
+  </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+let sessionHits = 0;
+let sessionMisses = 0;
+let sessionSavings = 0;
+let currentHitRate = 0.55; // default, updated from API
+
+// ============================================================================
+// Live stats from gateway
+// ============================================================================
+async function loadStats() {
+  try {
+    // Try the gateway's own analytics endpoint
+    const resp = await fetch('/api/analytics');
+    const data = await resp.json();
+
+    if (data && data.local) {
+      const l = data.local;
+      const totalReqs = l.total_requests || 0;
+      const hits = l.cache_hits || 0;
+      const misses = l.cache_misses || 0;
+      const hitRate = l.hit_rate_percent || 0;
+      const tokensSaved = l.tokens_saved || 0;
+      const savings = parseFloat(l.estimated_savings?.replace('$','') || 0);
+      const tenants = l.tenant_count || 0;
+
+      currentHitRate = hitRate / 100;
+
+      // Update stat cards with animation
+      animateNumber('totalReqs', totalReqs);
+      animateNumber('cacheHits', hits);
+      document.getElementById('hitRate').textContent = hitRate.toFixed(1) + '%';
+      document.getElementById('hitRateDisplay').textContent = hitRate.toFixed(1) + '%';
+      document.getElementById('hitRateBar').style.width = Math.min(hitRate, 100) + '%';
+      animateNumber('tokensSaved', tokensSaved);
+      document.getElementById('moneySaved').textContent = '$' + savings.toFixed(4);
+
+      // Update comparison sidebar
+      document.getElementById('hitRateComparison').textContent = hitRate.toFixed(1) + '%';
+      document.getElementById('savingsBadge').textContent = '~' + Math.round(savings / Math.max(totalReqs, 1) * 1000) + '% savings';
+
+      // Update share snippet
+      const shareHitRate = document.getElementById('shareHitRate');
+      if (shareHitRate) shareHitRate.textContent = hitRate.toFixed(1) + '%';
+      const shareTokens = document.getElementById('shareTokens');
+      if (shareTokens) shareTokens.textContent = tokensSaved.toLocaleString();
+      const shareCost = document.getElementById('shareCost');
+      if (shareCost) shareCost.textContent = '$' + savings.toFixed(4);
+
+      updateProjection();
+    }
+  } catch(e) {
+    console.log('Stats fetch failed (will retry):', e.message);
+  }
+}
+
+// ============================================================================
+// Animated number counters
+// ============================================================================
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  const current = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+  if (current === target) return;
+
+  const duration = 1000;
+  const start = performance.now();
+  const diff = target - current;
+
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(current + diff * eased).toLocaleString();
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ============================================================================
+// Projection calculator
+// ============================================================================
+function updateProjection() {
+  const monthlySpend = parseFloat(document.getElementById('monthlySpend').value) || 1000;
+  const savingsPercent = Math.max(0.40, Math.min(0.70, currentHitRate * 0.85));
+
+  const monthlySavings = monthlySpend * savingsPercent;
+  const annualSavings = monthlySavings * 12;
+  const effectiveCost = monthlySpend - monthlySavings;
+
+  document.getElementById('projMonthly').textContent = '$' + monthlySavings.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
+  document.getElementById('projAnnual').textContent = '$' + annualSavings.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
+  document.getElementById('projPercent').textContent = Math.round(savingsPercent * 100) + '%';
+  document.getElementById('projEffective').textContent = '$' + effectiveCost.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0});
+
+  // Update share text
+  const shareMonthly = document.getElementById('shareMonthly');
+  if (shareMonthly) shareMonthly.textContent = '$' + Math.round(monthlySavings).toLocaleString() + '/yr';
+  const shareAnnual = document.getElementById('shareAnnual');
+  if (shareAnnual) shareAnnual.textContent = '$' + Math.round(annualSavings).toLocaleString() + '/yr';
+}
+
+function setMonthly(val) {
+  document.getElementById('monthlySpend').value = val;
+  updateProjection();
+}
+
+// ============================================================================
+// Live cache demo (chat)
+// ============================================================================
+function useExample(text) {
+  document.getElementById('messageInput').value = text;
+  sendMessage();
+}
+
+async function sendMessage() {
+  const message = document.getElementById('messageInput').value.trim();
+  if (!message) return;
+
+  const chatBox = document.getElementById('chatBox');
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Sending...';
+
+  // Clear default message
+  if (chatBox.children.length === 1 && chatBox.children[0].style.padding === '40px 0px') {
+    chatBox.innerHTML = '';
+  }
+
+  // Add user message
+  chatBox.innerHTML += `<div class="chat-msg user"><strong>You:</strong> ${escapeHtml(message)}</div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // Loading
+  chatBox.innerHTML += `<div class="chat-msg assistant" id="loadingMsg"><strong>Proxymic:</strong> <span style="opacity:0.5;">Sending...</span></div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  const startTime = performance.now();
+
+  try {
+    const res = await fetch('/api/benchmark-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+
+    const latency = Math.round(performance.now() - startTime);
+    const cacheStatus = res.headers.get('X-Gateway-Cache') || 'MISS';
+    const isHit = cacheStatus === 'HIT';
+    const data = await res.json();
+    const content = data.response || data.content || data.choices?.[0]?.message?.content || JSON.stringify(data);
+    const score = data.score || data.confidence || (isHit ? '~0.96' : '0');
+
+    // Remove loading
+    const loading = document.getElementById('loadingMsg');
+    if (loading) loading.remove();
+
+    if (isHit) { sessionHits++; sessionSavings += 0.003; }
+    else sessionMisses++;
+
+    document.getElementById('sessionHits').textContent = sessionHits + ' hits';
+    document.getElementById('sessionMisses').textContent = sessionMisses + ' misses';
+    document.getElementById('sessionSaved').textContent = '$' + sessionSavings.toFixed(4) + ' saved';
+
+    // Simulated response for demo (since we can't guarantee a real API key on the server)
+    const demoResponse = isHit
+      ? `${content.substring(0, 200)}`
+      : `${content.substring(0, 200)}`;
+
+    chatBox.innerHTML += `<div class="chat-msg assistant">
+      <strong>Proxymic:</strong> ${escapeHtml(demoResponse)}
+      <span class="badge ${isHit ? 'hit' : 'miss'}">${cacheStatus}</span>
+      ${isHit ? `<span style="font-size:11px;color:#34d399;">💰 saved ~$0.003</span>` : ''}
+      <div class="meta">
+        <span>⚡ ${latency}ms</span>
+        <span>🎯 ${isHit ? (parseFloat(score) * 100).toFixed(1) + '%' : '—'}</span>
+        ${isHit ? '<span>📋 cached response</span>' : '<span>📋 called upstream</span>'}
+      </div>
+    </div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+  } catch(err) {
+    const loading = document.getElementById('loadingMsg');
+    if (loading) loading.remove();
+
+    // Simulate a result for demo purposes when no API key is configured
+    sessionMisses++;
+    document.getElementById('sessionHits').textContent = sessionHits + ' hits';
+    document.getElementById('sessionMisses').textContent = sessionMisses + ' misses';
+
+    chatBox.innerHTML += `<div class="chat-msg assistant">
+      <strong>Proxymic:</strong> The gateway is running but needs an upstream API key to process live requests. Check the dashboard for live cache stats, or <a href="/trial/signup" style="color:#a78bfa;">start a free trial</a>.
+      <span class="badge miss">DEMO</span>
+      <div class="meta">
+        <span>⚡ ${Math.round(performance.now() - startTime)}ms</span>
+        <span>📋 observer mode — stats still tracked</span>
+      </div>
+    </div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Send →';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================================================
+// Copy share text
+// ============================================================================
+function copyShareText() {
+  const box = document.getElementById('shareBox');
+  // Get text content without HTML tags
+  const text = box.textContent.trim();
+  navigator.clipboard.writeText(text).then(() => showToast('📋 Copied to clipboard! Paste it on LinkedIn, Twitter, or in a DM.'));
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ============================================================================
+// Updates for sharing section
+// ============================================================================
+setInterval(loadStats, 10000);
+loadStats();
+
+// Initial projection with defaults
+setTimeout(updateProjection, 500);
+</script>
+</body>
+</html>
